@@ -1,7 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Sparkles, type LucideIcon } from 'lucide-react';
-import { Logo } from './Logo';
 import { WaveCanvas } from './WaveCanvas';
 import { ThemeToggle } from './ThemeToggle';
 import type { Theme } from '../lib/theme';
@@ -123,7 +122,7 @@ export function Login({ onSignedIn, theme, onToggleTheme }: LoginProps) {
           aria-hidden
         />
         <div className="relative flex h-full flex-col justify-between p-10 xl:p-14">
-          <Logo size={28} className="self-start" />
+          <div />
           <div>
             <h2 className="max-w-[16ch] font-display text-[clamp(2.2rem,3.6vw,3.4rem)] font-semibold leading-[1.04] tracking-[-0.035em]">
               Your agents build. <span className="text-brand-green">You approve.</span>
@@ -152,7 +151,6 @@ export function Login({ onSignedIn, theme, onToggleTheme }: LoginProps) {
           transition={{ duration: 0.6, ease: EASE }}
           className="relative w-full max-w-[24rem]"
         >
-          <Logo size={26} className="lg:hidden" />
 
           <AnimatePresence mode="wait" initial={false}>
             {mode === 'signin' && (
