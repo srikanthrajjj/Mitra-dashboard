@@ -148,32 +148,46 @@ export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWork
 
   const openApprovals = () => onOpenApprovals(cat);
 
-  // Scale the whole layout up with the space available, so it fills big screens instead of sitting small.
+  // Scale the layout to the screen: as large as the width allows, but never taller than the viewport,
+  // so every card is in view without scrolling.
   const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   useEffect(() => {
     const el = outer.current;
-    if (!el) return;
-    const fit = () => setZoom(Math.min(1.75, Math.max(1, (el.clientWidth - 64) / 1040)));
+    const box = inner.current;
+    if (!el || !box) return;
+    const fit = () => {
+      const desktop = el.clientWidth >= 900;
+      const byWidth = Math.min(1.3, (el.clientWidth - 64) / 1040);
+      const natural = box.scrollHeight; // layout height before zoom
+      const byHeight = (window.innerHeight - 58) / Math.max(1, natural);
+      setZoom(desktop ? Math.max(0.6, Math.min(byWidth, byHeight)) : 1);
+    };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
-    return () => ro.disconnect();
+    ro.observe(box);
+    window.addEventListener('resize', fit);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', fit);
+    };
   }, []);
 
   return (
     <div ref={outer} className="w-full">
-    <div className="mx-auto max-w-[1104px] px-5 pb-10 pt-10 md:px-8 md:pt-14" style={{ zoom }}>
+    <div ref={inner} className="mx-auto max-w-[1104px] px-5 pb-6 pt-8 md:px-8 md:pt-10" style={{ zoom }}>
       {/* greeting + ask */}
       <div className="text-center">
         <h1 className="flex items-center justify-center gap-3 font-display text-[clamp(1.4rem,2.6vw,1.9rem)] font-medium tracking-[-0.02em]">
           <LogoMark size={26} />
           {greeting()}, {firstName(email)}. Let&rsquo;s get to work.
         </h1>
-        <div className="mx-auto mt-7 max-w-[560px] text-left">
+        <div className="mx-auto mt-5 max-w-[560px] text-left">
           <AskBar decisions={decisions} onAsk={onAsk} onOpenApp={onOpenApp} onOpenApprovals={onOpenApprovals} />
         </div>
-        <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+        <div className="mt-4 flex flex-wrap justify-center gap-2.5">
           {CHIPS.map((c) => (
             <button
               key={c}
@@ -188,7 +202,7 @@ export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWork
       </div>
 
       {/* cards */}
-      <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-[1.15fr_1fr_1fr]">
+      <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-[1.15fr_1fr_1fr]">
         <Card title="Top Activity" onOpen={openApprovals} className="md:row-span-2" delay={0}>
           <ul className="flex-1 divide-y divide-border">
             {pending.slice(0, 4).map((a) => (
@@ -279,7 +293,7 @@ export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWork
         </Card>
       </div>
 
-      <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">Sample data</p>
+      <p className="mt-5 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">Sample data</p>
     </div>
     </div>
   );
