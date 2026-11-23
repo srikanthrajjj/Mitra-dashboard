@@ -21,7 +21,7 @@ export interface Category {
   builds: Build[];
 }
 
-export const CATEGORIES: Category[] = [
+export const ALL_CATEGORIES: Category[] = [
   {
     key: 'itsm',
     label: 'ITSM',
@@ -145,7 +145,7 @@ export interface Approval {
 export type Decision = 'approved' | 'changes';
 export type Decisions = Record<string, Decision>;
 
-export const APPROVALS: Approval[] = [
+export const ALL_APPROVALS: Approval[] = [
   { id: 'a1', cat: 'itsm', title: 'Incident triage', stage: 'Test', by: 'Maria Chen', age: '12m', summary: 'ATF suite passes. Routing rules ready to promote to production.', artifacts: 6 },
   { id: 'a2', cat: 'itsm', title: 'Change approval flow', stage: 'Develop', by: 'Priya Nair', age: '1h', summary: 'Flow and approval groups configured for standard and normal changes.', artifacts: 5 },
   { id: 'a3', cat: 'itsm', title: 'Knowledge article agent', stage: 'Define', by: 'Tom Walker', age: '3h', summary: 'User stories and acceptance criteria captured from the workshop.', artifacts: 3 },
@@ -165,6 +165,9 @@ export const APPROVALS: Approval[] = [
   { id: 'a17', cat: 'secops', title: 'Privileged access policy', stage: 'Test', by: 'Kofi Mensah', age: '6h', summary: 'Policy checks pass. Awaiting security sign-off.', artifacts: 4 },
 ];
 
+export let CATEGORIES: Category[] = ALL_CATEGORIES;
+export let APPROVALS: Approval[] = ALL_APPROVALS;
+
 export const pendingCount = (d: Decisions, cat?: string): number =>
   APPROVALS.filter((a) => !d[a.id] && (!cat || cat === 'all' || a.cat === cat)).length;
 
@@ -180,15 +183,16 @@ export interface View {
   builds: Build[];
 }
 
-export const ALL_VIEW: View = {
+const buildAllView = (cats: Category[]): View => ({
   key: 'all',
   label: 'All workspaces',
   icon: LayoutDashboard,
-  activity: CATEGORIES.map((c) => c.activity[0]).slice(0, 5),
-  builds: CATEGORIES.map((c) => c.builds[0]).sort((a, b) => b.pct - a.pct).slice(0, 3),
-};
+  activity: cats.map((c) => c.activity[0]).slice(0, 5),
+  builds: cats.map((c) => c.builds[0]).sort((a, b) => b.pct - a.pct).slice(0, 3),
+});
+export let ALL_VIEW: View = buildAllView(ALL_CATEGORIES);
 
-export const WEEK: Record<string, [number, number, number]> = {
+const BASE_WEEK: Record<string, [number, number, number]> = {
   all: [23, 65, 213],
   itsm: [4, 11, 38],
   itom: [2, 6, 21],
@@ -198,7 +202,7 @@ export const WEEK: Record<string, [number, number, number]> = {
   secops: [6, 17, 52],
 };
 
-export const APPROVED_SHARE: Record<string, number> = {
+const BASE_SHARE: Record<string, number> = {
   all: 0.64,
   itsm: 0.57,
   itom: 0.78,
@@ -252,8 +256,8 @@ const LIVE: Omit<AppItem, 'stage' | 'pct' | 'approvalId'>[] = [
   { id: 'app-l6', name: 'Security incident response', cat: 'secops', version: '1.3', owner: 'Noor Haddad', updated: '3w', description: 'Triage, containment and evidence tracking for security incidents.', artifacts: ARTIFACT_NAMES.slice(0, 8), activity: ['Promoted to production', 'Playbooks linked', 'Approved by Noor Haddad'] },
 ];
 
-export const APPS: AppItem[] = [
-  ...APPROVALS.map((a): AppItem => {
+const ALL_APPS: AppItem[] = [
+  ...ALL_APPROVALS.map((a): AppItem => {
     const stage = STAGES.indexOf(a.stage as (typeof STAGES)[number]);
     return {
       id: `app-${a.id}`,
@@ -273,6 +277,8 @@ export const APPS: AppItem[] = [
   ...LIVE.map((l): AppItem => ({ ...l, stage: 5, pct: 100 })),
 ];
 
+export let APPS: AppItem[] = ALL_APPS;
+
 export type AppStatus = 'live' | 'approval' | 'approved' | 'changes' | 'building';
 
 /** An app's status follows its approval: deciding on it in Approvals changes it here. */
@@ -291,3 +297,45 @@ export const APP_STATUS_LABEL: Record<AppStatus, { label: string; cls: string }>
   changes: { label: 'Changes requested', cls: 'bg-muted text-foreground' },
   building: { label: 'In build', cls: 'bg-muted text-muted-foreground' },
 };
+
+/* ------------------------------------------------------------------ */
+/* Roles: each role only sees the workspaces it works in               */
+/* ------------------------------------------------------------------ */
+
+export interface Role {
+  key: string;
+  label: string;
+  /** Workspace keys this role can see. */
+  cats: string[];
+}
+
+export const ROLES: Role[] = [
+  { key: 'admin', label: 'Platform Admin', cats: ALL_CATEGORIES.map((c) => c.key) },
+  { key: 'itsm', label: 'IT Service Manager', cats: ['itsm', 'itom', 'itam'] },
+  { key: 'hr', label: 'HR Business Partner', cats: ['hrsd'] },
+  { key: 'sec', label: 'Security Lead', cats: ['secops', 'itom'] },
+  { key: 'cs', label: 'Customer Support Lead', cats: ['csm', 'itsm'] },
+];
+
+export const DEFAULT_ROLE = 'itsm';
+
+export let WEEK: Record<string, [number, number, number]> = BASE_WEEK;
+export const APPROVED_SHARE: Record<string, number> = { ...BASE_SHARE };
+
+/**
+ * Narrow every list in this module to what a role can see. The lists above are live bindings, so
+ * components read the scoped data without being passed it. Call it before rendering for a role.
+ */
+export function setRole(key: string): Role {
+  const role = ROLES.find((r) => r.key === key) ?? ROLES[0];
+  const keep = new Set(role.cats);
+  CATEGORIES = ALL_CATEGORIES.filter((c) => keep.has(c.key));
+  APPROVALS = ALL_APPROVALS.filter((a) => keep.has(a.cat));
+  APPS = ALL_APPS.filter((a) => keep.has(a.cat));
+  ALL_VIEW = buildAllView(CATEGORIES);
+  const sum = [0, 1, 2].map((i) => role.cats.reduce((n, k) => n + (BASE_WEEK[k]?.[i] ?? 0), 0)) as [number, number, number];
+  WEEK = { ...BASE_WEEK, all: sum };
+  const shares = role.cats.map((k) => BASE_SHARE[k] ?? 0.6);
+  APPROVED_SHARE.all = shares.reduce((a, b) => a + b, 0) / Math.max(1, shares.length);
+  return role;
+}

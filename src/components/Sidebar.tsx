@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CheckCheck, ChevronDown, Home, LayoutGrid, LogOut, MessageSquare, PanelLeftClose, PanelLeftOpen, Plus, X, type LucideIcon } from 'lucide-react';
+import { Check, CheckCheck, ChevronDown, Home, LayoutGrid, LogOut, MessageSquare, PanelLeftClose, PanelLeftOpen, Plus, X, type LucideIcon } from 'lucide-react';
 import { Logo, LogoMark } from './Logo';
 import { Notifications } from './Notifications';
-import { CATEGORIES, type Decisions } from '../data';
+import { CATEGORIES, ROLES, type Decisions } from '../data';
 import { SHOW_APPS, SHOW_WORKSPACES } from '../config';
 import { cn } from '../lib/utils';
 
@@ -25,6 +25,8 @@ interface SidebarProps {
   onNew: () => void;
   onGo: (view: ViewKey, cat: string) => void;
   email: string;
+  role: string;
+  onRole: (key: string) => void;
   onSignOut: () => void;
   drawerOpen: boolean;
   onCloseDrawer: () => void;
@@ -68,7 +70,7 @@ function Row({
   );
 }
 
-function AvatarMenu({ email, collapsed, onSignOut }: { email: string; collapsed: boolean; onSignOut: () => void }) {
+function AvatarMenu({ email, role, onRole, collapsed, onSignOut }: { email: string; role: string; onRole: (key: string) => void; collapsed: boolean; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const initials = (email.slice(0, 2) || 'AM').toUpperCase();
@@ -104,6 +106,27 @@ function AvatarMenu({ email, collapsed, onSignOut }: { email: string; collapsed:
               <p className="truncate text-[13px] font-medium">{email}</p>
             </div>
             <div className="my-1 h-px bg-border" />
+            <p className="px-2.5 pb-1 pt-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Role</p>
+            {ROLES.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                role="menuitemradio"
+                aria-checked={r.key === role}
+                onClick={() => {
+                  setOpen(false);
+                  if (r.key !== role) onRole(r.key);
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-accent"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{r.label}</span>
+                  <span className="block truncate font-mono text-[10px] uppercase text-muted-foreground">{r.cats.length === ROLES[0].cats.length ? 'All workspaces' : r.cats.join(' · ')}</span>
+                </span>
+                {r.key === role && <Check className="h-4 w-4 shrink-0 text-brand-green" aria-hidden />}
+              </button>
+            ))}
+            <div className="my-1 h-px bg-border" />
             <button
               type="button"
               role="menuitem"
@@ -126,7 +149,10 @@ function AvatarMenu({ email, collapsed, onSignOut }: { email: string; collapsed:
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-[11px] font-semibold">{initials}</span>
         {!collapsed && (
           <>
-            <span className="min-w-0 flex-1 truncate text-left text-[12.5px] text-muted-foreground">{email}</span>
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block truncate text-[12.5px]">{email}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{ROLES.find((r) => r.key === role)?.label}</span>
+            </span>
             <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} aria-hidden />
           </>
         )}
@@ -285,7 +311,7 @@ function Body({
         )}
       </nav>
 
-      <AvatarMenu email={p.email} collapsed={collapsed} onSignOut={p.onSignOut} />
+      <AvatarMenu email={p.email} role={p.role} onRole={p.onRole} collapsed={collapsed} onSignOut={p.onSignOut} />
     </div>
   );
 }

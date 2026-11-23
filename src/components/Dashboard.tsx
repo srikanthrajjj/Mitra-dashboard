@@ -12,7 +12,7 @@ import { readChats, titleFrom, uid, writeChats, type Chat as ChatModel } from '.
 import { ThemeToggle } from './ThemeToggle';
 import type { Theme } from '../lib/theme';
 import { CommandPalette, type PaletteItem } from './CommandPalette';
-import { ALL_VIEW, APPROVALS, APPS, CATEGORIES, appStatus, pendingCount, type Decision, type Decisions } from '../data';
+import { ALL_VIEW, APPROVALS, APPS, CATEGORIES, DEFAULT_ROLE, ROLES, appStatus, pendingCount, setRole, type Decision, type Decisions } from '../data';
 import { cn } from '../lib/utils';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -108,7 +108,40 @@ function AppSwitcher({ decisions, onOpenApp, onAll }: { decisions: Decisions; on
   );
 }
 
-export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: string; onSignOut: () => void; theme: Theme; onToggleTheme: () => void }) {
+const ROLE_KEY = 'mitra-dashboard:role';
+
+function readRole(): string {
+  try {
+    const k = window.sessionStorage.getItem(ROLE_KEY);
+    return ROLES.some((r) => r.key === k) ? (k as string) : DEFAULT_ROLE;
+  } catch {
+    return DEFAULT_ROLE;
+  }
+}
+
+interface DashboardProps {
+  email: string;
+  onSignOut: () => void;
+  theme: Theme;
+  onToggleTheme: () => void;
+}
+
+/** Holds the signed-in role. Switching role rebuilds the dashboard on that role's workspaces only. */
+export function Dashboard(props: DashboardProps) {
+  const [role, setRoleKey] = useState(readRole);
+  setRole(role); // scope the data before anything below renders
+  const pick = (k: string) => {
+    try {
+      window.sessionStorage.setItem(ROLE_KEY, k);
+    } catch {
+      /* the choice just will not survive a reload */
+    }
+    setRoleKey(k);
+  };
+  return <DashboardInner key={role} {...props} role={role} onRole={pick} />;
+}
+
+function DashboardInner({ email, onSignOut, theme, onToggleTheme, role, onRole }: DashboardProps & { role: string; onRole: (k: string) => void }) {
   const [view, setView] = useState<ViewKey>('home');
   const [cat, setCat] = useState('all');
   const [decisions, setDecisions] = useState<Decisions>({});
@@ -293,6 +326,8 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
         onNew={newChat}
         onGo={go}
         email={email}
+        role={role}
+        onRole={onRole}
         onSignOut={onSignOut}
         drawerOpen={drawer}
         onCloseDrawer={() => setDrawer(false)}
