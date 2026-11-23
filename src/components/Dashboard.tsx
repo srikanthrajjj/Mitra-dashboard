@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, CheckCheck, Home as HomeIcon, LayoutGrid, Menu, Search } from 'lucide-react';
+import { Check, CheckCheck, Home as HomeIcon, LayoutGrid, Menu, MessageSquarePlus, Search } from 'lucide-react';
 import { Sidebar, type ViewKey } from './Sidebar';
 import { Home } from './Home';
 import { Approvals } from './Approvals';
 import { Apps } from './Apps';
+import { Chat } from './Chat';
+import { route } from '../lib/ask';
+import { SHOW_APPS } from '../config';
+import { readChats, titleFrom, uid, writeChats, type Chat as ChatModel } from '../lib/chats';
 import { ThemeToggle } from './ThemeToggle';
 import type { Theme } from '../lib/theme';
 import { CommandPalette, type PaletteItem } from './CommandPalette';
@@ -111,7 +115,8 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
-  const [focusTick, setFocusTick] = useState(0);
+  const [chats, setChats] = useState<ChatModel[]>(readChats);
+  const [activeChat, setActiveChat] = useState<string | null>(null);
   const [openApp, setOpenApp] = useState<string | null>(null);
   const [toast, setToast] = useState<{ title: string; body: string } | null>(null);
 
@@ -124,6 +129,7 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
     setView(v);
     setCat(c);
     setOpenApp(null);
+    setChats((prev) => (prev.some((x) => x.messages.length === 0) ? prev.filter((x) => x.messages.length > 0) : prev));
     window.scrollTo({ top: 0 });
   }, []);
 
@@ -135,9 +141,71 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
     window.scrollTo({ top: 0 });
   }, []);
 
+  useEffect(() => {
+    writeChats(chats);
+  }, [chats]);
+
+  const openChat = useCallback((id: string) => {
+    setView('chat');
+    setActiveChat(id);
+    setOpenApp(null);
+    setChats((prev) => prev.filter((c) => c.id === id || c.messages.length > 0));
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  /** New Chat: a blank conversation, like opening a fresh chat in any chat app. Reuses an empty one. */
   const newChat = () => {
-    go('home', 'all');
-    setFocusTick((n) => n + 1);
+    const empty = chats.find((c) => c.messages.length === 0);
+    if (empty) return openChat(empty.id);
+    const fresh: ChatModel = { id: uid(), title: 'New chat', messages: [], at: Date.now() };
+    setChats((prev) => [fresh, ...prev]);
+    openChat(fresh.id);
+  };
+
+  const exchange = (text: string) => [
+    { id: uid(), role: 'user' as const, text },
+    { id: uid(), role: 'assistant' as const, answer: route(text, decisions, 'all'), fresh: true },
+  ];
+
+  /** Asking from Home opens a new chat with the question already sent. */
+  const askFromHome = (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    const chat: ChatModel = { id: uid(), title: titleFrom(t), messages: exchange(t), at: Date.now() };
+    setChats((prev) => [chat, ...prev.filter((c) => c.messages.length > 0)]);
+    openChat(chat.id);
+  };
+
+  /** A message in the chat you are already in. */
+  const sendInChat = (text: string) => {
+    const t = text.trim();
+    if (!t || !activeChat) return;
+    setChats((prev) =>
+      prev.map((c) => (c.id === activeChat ? { ...c, title: c.messages.length === 0 ? titleFrom(t) : c.title, messages: [...c.messages, ...exchange(t)] } : c)),
+    );
+  };
+
+  const settle = (msgId: string) =>
+    setChats((prev) => prev.map((c) => ({ ...c, messages: c.messages.map((m) => (m.id === msgId && m.fresh ? { ...m, fresh: false } : m)) })));
+
+  const startBuild = (name: string) => {
+    setToast({ title: 'Build started', body: `${name} is in the Define stage` });
+    if (!activeChat) return;
+    setChats((prev) =>
+      prev.map((c) =>
+        c.id === activeChat
+          ? { ...c, messages: [...c.messages, { id: uid(), role: 'assistant' as const, text: `Build started for ${name}. It is in the Define stage now, and I will flag it in Approvals when it needs your decision.` }] }
+          : c,
+      ),
+    );
+  };
+
+  const deleteChat = (id: string) => {
+    setChats((prev) => prev.filter((c) => c.id !== id));
+    if (activeChat === id) {
+      setActiveChat(null);
+      go('home', 'all');
+    }
   };
 
   const toggleCollapsed = () => {
@@ -181,11 +249,13 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
 
   const paletteItems: PaletteItem[] = useMemo(
     () => [
+      { id: 'new-chat', label: 'New chat', hint: 'Action', icon: MessageSquarePlus, run: () => newChat() },
       { id: 'home', label: 'Home', hint: 'Screen', icon: HomeIcon, run: () => go('home', 'all') },
-      { id: 'apps', label: 'Apps', hint: `${APPS.length} apps`, icon: LayoutGrid, run: () => go('apps', 'all') },
+      ...(SHOW_APPS ? [{ id: 'apps', label: 'Apps', hint: `${APPS.length} apps`, icon: LayoutGrid, run: () => go('apps', 'all') }] : []),
       { id: 'approvals', label: 'Approvals', hint: `${total} pending`, icon: CheckCheck, run: () => go('approvals', 'all') },
+      ...chats.filter((c) => c.messages.length > 0).slice(0, 5).map((c) => ({ id: `chat-${c.id}`, label: c.title, hint: 'Chat', icon: MessageSquarePlus, run: () => openChat(c.id) })),
       ...CATEGORIES.map((k) => ({ id: `ws-${k.key}`, label: k.label, hint: 'Workspace', icon: k.icon, run: () => go('home', k.key) })),
-      ...APPS.map((a) => ({
+      ...(SHOW_APPS ? APPS : []).map((a) => ({
         id: a.id,
         label: a.name,
         hint: 'App',
@@ -200,7 +270,7 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
         run: () => go('approvals', a.cat),
       })),
     ],
-    [decisions, go, showApp, total],
+    [chats, decisions, go, openChat, showApp, total],
   );
 
   const crumb = view === 'approvals' ? 'Approvals' : current.label;
@@ -212,6 +282,10 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
         cat={cat}
         counts={counts}
         total={total}
+        chats={chats.filter((c) => c.messages.length > 0).map((c) => ({ id: c.id, title: c.title }))}
+        activeChatId={activeChat}
+        onOpenChat={openChat}
+        onDeleteChat={deleteChat}
         decisions={decisions}
         onOpenApprovals={(c) => go('approvals', c)}
         collapsed={collapsed}
@@ -236,8 +310,9 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
               <Menu className="h-4 w-4" />
             </button>
             <p className="truncate text-[12px] text-muted-foreground">
-              {view === 'approvals' ? 'Approvals' : view === 'apps' ? 'Apps' : 'Workspace'} {view === 'home' && <span className="px-1">/</span>}
+              {view === 'approvals' ? 'Approvals' : view === 'apps' ? 'Apps' : view === 'chat' ? 'Chat' : 'Workspace'} {(view === 'home' || view === 'chat') && <span className="px-1">/</span>}
               {view === 'home' && <span className="text-foreground">{crumb}</span>}
+              {view === 'chat' && <span className="text-foreground">{chats.find((c) => c.id === activeChat)?.title ?? 'New chat'}</span>}
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -251,7 +326,7 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
               <span className="hidden sm:inline">Search</span>
               <kbd className="hidden rounded border border-border px-1 font-mono text-[10px] sm:inline">⌘K</kbd>
             </button>
-            <AppSwitcher decisions={decisions} onOpenApp={showApp} onAll={() => go('apps', 'all')} />
+            {SHOW_APPS && <AppSwitcher decisions={decisions} onOpenApp={showApp} onAll={() => go('apps', 'all')} />}
             <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           </div>
         </header>
@@ -270,13 +345,23 @@ export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: s
                 view={current}
                 email={email}
                 decisions={decisions}
-                focusTick={focusTick}
                 onDecide={decide}
                 onOpenApp={showApp}
                 onOpenApps={() => go('apps', cat)}
                 onOpenApprovals={(c) => go('approvals', c)}
                 onWorkspace={(c) => go('home', c)}
-                onToast={(title, body) => setToast({ title, body })}
+                onAsk={askFromHome}
+              />
+            ) : view === 'chat' && chats.find((c) => c.id === activeChat) ? (
+              <Chat
+                key={activeChat}
+                chat={chats.find((c) => c.id === activeChat) as ChatModel}
+                decisions={decisions}
+                onSend={sendInChat}
+                onSettled={settle}
+                onOpenApp={showApp}
+                onOpenApprovals={(c) => go('approvals', c)}
+                onStartBuild={startBuild}
               />
             ) : view === 'apps' ? (
               <Apps cat={cat} onCat={setCat} decisions={decisions} openId={openApp} onOpen={setOpenApp} onReview={(c) => go('approvals', c)} />

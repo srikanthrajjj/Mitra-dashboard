@@ -30,7 +30,9 @@ export function CommandPalette({ open, onClose, items }: { open: boolean; onClos
     }
   }, [open]);
 
-  useEffect(() => setIndex(0), [q]);
+  useEffect(() => {
+    setIndex(0);
+  }, [q]);
 
   const choose = (i: PaletteItem | undefined) => {
     if (!i) return;
