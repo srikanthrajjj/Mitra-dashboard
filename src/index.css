@@ -21,6 +21,12 @@
   --color-mitra-border: var(--mitra-border);
   --color-mitra-highlight: var(--mitra-highlight);
   --color-mitra-input: var(--mitra-input);
+
+  --color-chart-red: var(--chart-red);
+  --color-chart-orange: var(--chart-orange);
+  --color-chart-yellow: var(--chart-yellow);
+  --color-chart-blue: var(--chart-blue);
+  --color-chart-grey: var(--chart-grey);
 }
 
 :root {
@@ -40,12 +46,18 @@
   --mitra-border: #2d2d2d;
   --mitra-highlight: #313131;
   --mitra-input: #252525;
+
+  --chart-red: #ef4b4b;
+  --chart-orange: #f59a4a;
+  --chart-yellow: #f4cf4d;
+  --chart-blue: #4a8df0;
+  --chart-grey: #8a8f98;
 }
 
 /* Light theme. The green is deeper here: the dark-theme green is about 2:1 on white. */
 :root.light {
   color-scheme: light;
-  --background: 210 33% 98%;
+  --background: 220 20% 96%;
   --foreground: 150 22% 12%;
   --card: 0 0% 100%;
   --muted: 210 24% 94%;
@@ -60,6 +72,12 @@
   --mitra-border: #d8dfe7;
   --mitra-highlight: #e8eef4;
   --mitra-input: #ffffff;
+
+  --chart-red: #e5303a;
+  --chart-orange: #f08a3c;
+  --chart-yellow: #f2c53d;
+  --chart-blue: #3b7be8;
+  --chart-grey: #b9bec7;
 }
 
 html,
@@ -86,7 +104,7 @@ h4,
 }
 
 button {
-  font: inherit;
+  font-family: inherit;
 }
 
 @media (prefers-reduced-motion: reduce) {

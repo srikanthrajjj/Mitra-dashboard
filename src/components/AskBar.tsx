@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUp, CheckCheck, CornerDownLeft, LayoutGrid, Sparkles } from 'lucide-react';
+import { ArrowUp, CheckCheck, CornerDownLeft, LayoutGrid, Mic, Plus, Sparkles } from 'lucide-react';
 import { CATEGORIES, type Decisions } from '../data';
 import { suggest, type Suggestion } from '../lib/ask';
 import { cn } from '../lib/utils';
@@ -73,11 +73,11 @@ export function AskBar({ decisions, onAsk, onOpenApp, onOpenApprovals }: AskBarP
           choose(focused && q.trim() ? suggestions[idx] : undefined);
         }}
         className={cn(
-          'flex h-14 items-center gap-3 rounded-2xl border bg-card px-4 transition-all',
+          'flex h-[52px] items-center gap-3 rounded-full border bg-card pl-5 pr-2 shadow-[0_6px_24px_-8px_rgba(15,23,42,0.18)] transition-all',
           focused ? 'border-brand-green/60 ring-4 ring-brand-green/10' : 'border-border',
         )}
       >
-        <Sparkles className="h-5 w-5 shrink-0 text-brand-green" aria-hidden />
+        <Plus className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
         <input
           ref={inputRef}
           value={q}
@@ -99,20 +99,22 @@ export function AskBar({ decisions, onAsk, onOpenApp, onOpenApprovals }: AskBarP
               choose(suggestions[idx]);
             }
           }}
-          placeholder="Ask Mitra anything, or tell it what to build…"
+          placeholder={'Ask Mitra, "What is waiting on me?"'}
           aria-label="Ask Mitra"
           aria-expanded={focused}
           autoComplete="off"
           className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
         />
         {!focused && !q && <kbd className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground sm:block">/</kbd>}
-        <button
-          type="submit"
-          aria-label="Send"
-          className={cn('grid h-9 w-9 place-items-center rounded-full transition-colors', q.trim() ? 'bg-brand-green text-background' : 'bg-muted text-muted-foreground')}
-        >
-          <ArrowUp className="h-4 w-4" />
-        </button>
+        {q.trim() ? (
+          <button type="submit" aria-label="Send" className="grid h-9 w-9 place-items-center rounded-full bg-brand-green text-background transition-colors hover:bg-brand-green-hover">
+            <ArrowUp className="h-4 w-4" />
+          </button>
+        ) : (
+          <button type="button" aria-label="Start typing" onClick={() => inputRef.current?.focus()} className="grid h-9 w-9 place-items-center rounded-full bg-brand-green text-background transition-colors hover:bg-brand-green-hover">
+            <Mic className="h-4 w-4" />
+          </button>
+        )}
       </form>
 
       <AnimatePresence>
@@ -123,7 +125,7 @@ export function AskBar({ decisions, onAsk, onOpenApp, onOpenApprovals }: AskBarP
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-mitra-border bg-mitra-surface p-1.5"
+            className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-mitra-border bg-mitra-surface p-1.5 shadow-[0_12px_32px_-12px_rgba(15,23,42,0.25)]"
           >
             <p className="px-3 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{q.trim() ? 'Suggestions' : 'Try asking'}</p>
             {suggestions.map((s, i) => {

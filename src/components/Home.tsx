@@ -1,24 +1,21 @@
-import { useEffect, type ReactNode } from 'react';
-import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'motion/react';
-import { ArrowRight, Check, CheckCheck, FileText, LayoutGrid, Rocket, Wrench } from 'lucide-react';
+import { useMemo, type ReactNode } from 'react';
+import { motion } from 'motion/react';
+import { ArrowUpRight } from 'lucide-react';
 import { AskBar } from './AskBar';
-import { SHOW_APPS } from '../config';
-import {
-  APPROVALS,
-  APPS,
-  APPROVED_SHARE,
-  CATEGORIES,
-  STAGES,
-  TONE,
-  WEEK,
-  pendingCount,
-  type Decision,
-  type Decisions,
-  type View,
-} from '../data';
+import { LogoMark } from './Logo';
+import { APPROVALS, APPROVED_SHARE, CATEGORIES, pendingCount, type Decision, type Decisions, type View } from '../data';
 import { cn } from '../lib/utils';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+const CHIPS = ['What is waiting on me?', 'Show the oldest approvals', 'Summarise this week'];
+
+const SKILLS: { name: string; tasks: number }[] = [
+  { name: 'Requirements', tasks: 172 },
+  { name: 'Build & Test', tasks: 7 },
+  { name: 'Documentation', tasks: 9 },
+  { name: 'Release', tasks: 12 },
+];
 
 function ageMinutes(age: string): number {
   const n = parseInt(age, 10) || 0;
@@ -32,53 +29,86 @@ function firstName(email: string): string {
 
 function greeting(): string {
   const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  return h < 12 ? 'Morning' : h < 18 ? 'Afternoon' : 'Evening';
 }
 
-function Count({ value }: { value: number }) {
-  const mv = useMotionValue(0);
-  const text = useTransform(mv, (v) => String(Math.round(v)));
-  useEffect(() => {
-    const controls = animate(mv, value, { duration: 0.9, ease: EASE });
-    return () => controls.stop();
-  }, [mv, value]);
-  return <motion.span>{text}</motion.span>;
-}
-
-function Panel({ title, aside, children, className }: { title: string; aside?: ReactNode; children: ReactNode; className?: string }) {
+/** The shared card: bold title, arrow at the top right, content below. */
+function Card({ title, onOpen, children, className, delay = 0 }: { title: string; onOpen?: () => void; children: ReactNode; className?: string; delay?: number }) {
   return (
-    <section className={cn('rounded-2xl border border-border bg-card p-5', className)}>
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay, ease: EASE }}
+      className={cn('flex flex-col rounded-2xl border border-border bg-card p-5', className)}
+    >
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted-foreground">{title}</h2>
-        {aside}
+        <h2 className="font-sans text-[15px] font-semibold tracking-[-0.01em]">{title}</h2>
+        {onOpen && (
+          <button type="button" onClick={onOpen} aria-label={`Open ${title}`} className="text-muted-foreground transition-colors hover:text-foreground">
+            <ArrowUpRight className="h-4 w-4" aria-hidden />
+          </button>
+        )}
       </div>
       {children}
-    </section>
+    </motion.section>
   );
 }
 
-function Ring({ pct }: { pct: number }) {
-  const r = 20;
-  const c = 2 * Math.PI * r;
+function Gauge({ pct }: { pct: number }) {
   return (
-    <div className="relative grid h-14 w-14 shrink-0 place-items-center">
-      <svg viewBox="0 0 48 48" className="absolute inset-0 -rotate-90" aria-hidden>
-        <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4" className="stroke-border" />
-        <motion.circle
-          cx="24"
-          cy="24"
-          r={r}
+    <div className="relative mx-auto w-full max-w-[210px]">
+      <svg viewBox="0 0 200 108" className="w-full" aria-hidden>
+        <path d="M18 100 A82 82 0 0 1 182 100" fill="none" strokeWidth="24" strokeLinecap="round" className="stroke-chart-blue/25" />
+        <motion.path
+          d="M18 100 A82 82 0 0 1 182 100"
           fill="none"
-          strokeWidth="4"
+          strokeWidth="24"
           strokeLinecap="round"
-          className="stroke-brand-green"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: c * (1 - pct / 100) }}
-          transition={{ duration: 1, ease: EASE }}
+          className="stroke-chart-orange"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: pct / 100 }}
+          transition={{ duration: 1.1, ease: EASE }}
         />
       </svg>
-      <span className="font-display text-[12px] font-semibold tabular-nums">{pct}%</span>
+      <p className="absolute inset-x-0 bottom-0 text-center font-display text-[2.1rem] font-semibold leading-none tabular-nums tracking-[-0.04em]">{pct}%</p>
+    </div>
+  );
+}
+
+function Donut({ parts, total }: { parts: { n: number; cls: string }[]; total: number }) {
+  const sum = Math.max(1, parts.reduce((a, p) => a + p.n, 0));
+  let start = 0;
+  return (
+    <div className="relative grid h-[124px] w-[124px] shrink-0 place-items-center">
+      <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" aria-hidden>
+        <circle cx="50" cy="50" r="40" fill="none" strokeWidth="13" className="stroke-border" />
+        {parts.map((p, i) => {
+          const len = (p.n / sum) * 100;
+          const el = (
+            <motion.circle
+              key={i}
+              cx="50"
+              cy="50"
+              r="40"
+              fill="none"
+              strokeWidth="13"
+              pathLength={100}
+              className={p.cls}
+              strokeDasharray={`${Math.max(0, len - 1)} ${100 - Math.max(0, len - 1)}`}
+              strokeDashoffset={-start}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: p.n > 0 ? 1 : 0 }}
+              transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
+            />
+          );
+          start += len;
+          return el;
+        })}
+      </svg>
+      <div className="text-center">
+        <p className="font-display text-[2rem] font-semibold leading-none tabular-nums tracking-[-0.04em]">{total}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">Open</p>
+      </div>
     </div>
   );
 }
@@ -96,279 +126,146 @@ interface HomeProps {
   onAsk: (text: string) => void;
 }
 
-export function Home({ cat, view, email, decisions, onDecide, onOpenApp, onOpenApps, onOpenApprovals, onWorkspace, onAsk }: HomeProps) {
-  const inScope = <T extends { cat: string }>(x: T) => cat === 'all' || x.cat === cat;
-  const pending = APPROVALS.filter((a) => !decisions[a.id] && inScope(a)).sort((a, b) => ageMinutes(b.age) - ageMinutes(a.age));
-  const next = pending[0];
-  const scopedApps = APPS.filter(inScope);
-  const inBuild = scopedApps.filter((a) => a.stage < 5);
-  const live = scopedApps.filter((a) => a.stage >= 5);
-  const week = WEEK[cat] ?? WEEK.all;
-  const share = APPROVED_SHARE[cat] ?? 0.64;
-  const motion3 = [...inBuild].sort((a, b) => b.pct - a.pct).slice(0, 3);
-  const stageCounts = [0, 1, 2, 3, 4, 5].map((s) => scopedApps.filter((a) => a.stage === s).length);
-  const peak = Math.max(1, ...stageCounts);
-  const needApproval = inBuild.filter((a) => a.approvalId && !decisions[a.approvalId]).length;
-  const date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWorkspace, onAsk }: HomeProps) {
+  const pending = useMemo(
+    () => APPROVALS.filter((a) => !decisions[a.id] && (cat === 'all' || a.cat === cat)).sort((a, b) => ageMinutes(b.age) - ageMinutes(a.age)),
+    [decisions, cat],
+  );
+  const share = Math.round((APPROVED_SHARE[cat] ?? 0.64) * 100);
 
-  const toApps = SHOW_APPS ? onOpenApps : undefined;
-  const kpis: { label: string; value: number; note: string; icon: ReactNode; onClick?: () => void }[] = [
-    {
-      label: 'Waiting on you',
-      value: pending.length,
-      note: next ? `Oldest has waited ${next.age}` : 'You are all caught up',
-      icon: <CheckCheck className="h-4 w-4" aria-hidden />,
-      onClick: () => onOpenApprovals(cat),
-    },
-    ...(SHOW_APPS
-      ? [
-          { label: 'Apps in build', value: inBuild.length, note: `${needApproval} need approval`, icon: <Wrench className="h-4 w-4" aria-hidden />, onClick: toApps },
-          { label: 'Live apps', value: live.length, note: `${Math.round(share * 100)}% of stages approved`, icon: <Rocket className="h-4 w-4" aria-hidden />, onClick: toApps },
-        ]
-      : [
-          { label: 'Approvals given', value: week[1], note: 'This week', icon: <Wrench className="h-4 w-4" aria-hidden />, onClick: undefined },
-          { label: 'Skills run', value: week[2], note: 'This week', icon: <Rocket className="h-4 w-4" aria-hidden />, onClick: undefined },
-        ]),
-    { label: 'Shipped this week', value: week[0], note: `${Math.round(share * 100)}% of stages approved`, icon: <LayoutGrid className="h-4 w-4" aria-hidden />, onClick: toApps },
+  const buckets = [
+    { label: 'Over 3 hours', cls: 'stroke-chart-red', dot: 'bg-chart-red', n: pending.filter((a) => ageMinutes(a.age) >= 180).length },
+    { label: '1 to 3 hours', cls: 'stroke-chart-orange', dot: 'bg-chart-orange', n: pending.filter((a) => ageMinutes(a.age) >= 60 && ageMinutes(a.age) < 180).length },
+    { label: '15 to 60 min', cls: 'stroke-chart-yellow', dot: 'bg-chart-yellow', n: pending.filter((a) => ageMinutes(a.age) >= 15 && ageMinutes(a.age) < 60).length },
+    { label: 'Under 15 min', cls: 'stroke-chart-grey', dot: 'bg-chart-grey', n: pending.filter((a) => ageMinutes(a.age) < 15).length },
   ];
 
-  return (
-    <div className="relative">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
-        style={{ background: 'radial-gradient(ellipse 55% 100% at 25% 0%, color-mix(in srgb, var(--brand-green) 12%, transparent), transparent 72%)' }}
-        aria-hidden
-      />
-      <div className="relative mx-auto max-w-6xl space-y-6 p-5 md:p-8">
-        {/* greeting + ask */}
-        <div className="pt-2">
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{date}</p>
-          <h1 className="mt-3 font-display text-[clamp(2rem,4.4vw,3.4rem)] font-semibold leading-[1.05] tracking-[-0.04em]">
-            {greeting()}, {firstName(email)}.
-          </h1>
-          <p className="mt-2 text-[15px] text-muted-foreground">
-            {pending.length > 0 ? (
-              <>
-                <span className="font-medium text-foreground">{pending.length} {pending.length === 1 ? 'approval needs' : 'approvals need'} you</span>
-                {' '}and {inBuild.length} {inBuild.length === 1 ? 'build is' : 'builds are'} in progress.
-              </>
-            ) : (
-              'Nothing is waiting on you. Your agents are still building.'
-            )}
-          </p>
-          <div className="mt-6 max-w-3xl">
-            <AskBar decisions={decisions} onAsk={onAsk} onOpenApp={onOpenApp} onOpenApprovals={onOpenApprovals} />
-          </div>
-        </div>
+  const rows = CATEGORIES.slice(0, 4).map((c) => {
+    const waiting = pendingCount(decisions, c.key);
+    const open = Math.round((1 - (APPROVED_SHARE[c.key] ?? 0.6)) * 100);
+    return { key: c.key, label: c.label, waiting, pct: open };
+  });
 
-        {/* at a glance */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {kpis.map((k, i) => (
-            <motion.div
-              key={k.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: i * 0.06, ease: EASE }}
-              className="contents"
+  const openApprovals = () => onOpenApprovals(cat);
+
+  return (
+    <div className="mx-auto max-w-[1040px] px-5 pb-10 pt-10 md:px-8 md:pt-14">
+      {/* greeting + ask */}
+      <div className="text-center">
+        <h1 className="flex items-center justify-center gap-3 font-display text-[clamp(1.4rem,2.6vw,1.9rem)] font-medium tracking-[-0.02em]">
+          <LogoMark size={26} />
+          {greeting()}, {firstName(email)}. Let&rsquo;s get to work.
+        </h1>
+        <div className="mx-auto mt-7 max-w-[560px] text-left">
+          <AskBar decisions={decisions} onAsk={onAsk} onOpenApp={onOpenApp} onOpenApprovals={onOpenApprovals} />
+        </div>
+        <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+          {CHIPS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => onAsk(c)}
+              className="rounded-md border border-border bg-card px-3.5 py-2 text-[12.5px] text-foreground transition-colors hover:bg-accent"
             >
-              {k.onClick ? (
-                <button type="button" onClick={k.onClick} className="group rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-brand-green/40">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[12px]">{k.label}</span>
-                <span className="text-brand-green">{k.icon}</span>
-              </div>
-              <p className="mt-3 font-display text-[2.4rem] font-semibold leading-none tabular-nums tracking-[-0.04em]">
-                <Count value={k.value} />
-              </p>
-              <p className="mt-2 truncate text-[11.5px] text-muted-foreground">{k.note}</p>
-                </button>
-              ) : (
-                <div className="rounded-2xl border border-border bg-card p-4 text-left">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[12px]">{k.label}</span>
-                <span className="text-brand-green">{k.icon}</span>
-              </div>
-              <p className="mt-3 font-display text-[2.4rem] font-semibold leading-none tabular-nums tracking-[-0.04em]">
-                <Count value={k.value} />
-              </p>
-              <p className="mt-2 truncate text-[11.5px] text-muted-foreground">{k.note}</p>
-                </div>
-              )}
-            </motion.div>
+              {c}
+            </button>
           ))}
         </div>
-
-        <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-          <div className="space-y-4">
-            {/* the one thing to do next */}
-            <Panel title="Up next" aside={next && <span className="text-[11px] text-muted-foreground">{pending.length - 1} more after this</span>}>
-              <AnimatePresence mode="wait" initial={false}>
-                {next ? (
-                  <motion.div
-                    key={next.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -24 }}
-                    transition={{ duration: 0.3, ease: EASE }}
-                  >
-                    <div className="flex items-start gap-4">
-                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-green/10 text-brand-green">
-                        {(() => {
-                          const Icon = CATEGORIES.find((c) => c.key === next.cat)?.icon ?? FileText;
-                          return <Icon className="h-6 w-6" aria-hidden />;
-                        })()}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-display text-xl font-semibold tracking-[-0.02em]">{next.title}</h3>
-                          <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{next.stage} stage</span>
-                        </div>
-                        <p className="mt-1.5 text-[13.5px] leading-snug text-muted-foreground">{next.summary}</p>
-                        <p className="mt-2 text-[12px] text-muted-foreground">
-                          {next.by} · waiting {next.age} · {next.artifacts} artifacts
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onDecide(next.id, 'approved')}
-                        className="flex items-center gap-2 rounded-lg bg-brand-green px-4 py-2.5 text-[13px] font-semibold text-background transition-colors hover:bg-brand-green-hover"
-                      >
-                        <Check className="h-4 w-4" strokeWidth={3} aria-hidden /> Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDecide(next.id, 'changes')}
-                        className="rounded-lg border border-border px-4 py-2.5 text-[13px] transition-colors hover:bg-accent"
-                      >
-                        Request changes
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onOpenApprovals(next.cat)}
-                        className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        Review in full <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                      </button>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div key="clear" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-8 text-center">
-                    <span className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-brand-green/15 text-brand-green">
-                      <CheckCheck className="h-5 w-5" aria-hidden />
-                    </span>
-                    <p className="mt-4 font-display text-lg font-semibold tracking-[-0.02em]">You are all caught up</p>
-                    <p className="mt-1 text-[13px] text-muted-foreground">Mitra will tell you the moment something needs a decision.</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </Panel>
-
-            {/* delivery pipeline */}
-            <Panel title="Delivery pipeline" aside={SHOW_APPS ? <button type="button" onClick={onOpenApps} className="text-[11px] text-brand-green transition-colors hover:text-brand-green-hover">All apps</button> : undefined}>
-              <div className="grid grid-cols-6 items-end gap-2 sm:gap-3">
-                {[...STAGES, 'Live'].map((label, i) => (
-                  <button key={label} type="button" onClick={toApps} disabled={!SHOW_APPS} className="group flex flex-col items-center gap-2 disabled:cursor-default" title={`${stageCounts[i]} ${stageCounts[i] === 1 ? 'app' : 'apps'} · ${label}`}>
-                    <span className="font-display text-lg font-semibold tabular-nums tracking-[-0.03em]">{stageCounts[i]}</span>
-                    <span className="flex h-24 w-full items-end overflow-hidden rounded-lg bg-muted">
-                      <motion.span
-                        className={cn('w-full rounded-lg', i === 5 ? 'bg-brand-green' : 'bg-brand-green/45 group-hover:bg-brand-green/70')}
-                        initial={{ height: 0 }}
-                        animate={{ height: `${Math.max(6, (stageCounts[i] / peak) * 100)}%` }}
-                        transition={{ duration: 0.8, delay: 0.1 + i * 0.06, ease: EASE }}
-                      />
-                    </span>
-                    <span className="font-mono text-[10px] text-muted-foreground">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </Panel>
-          </div>
-
-          {/* live activity */}
-          <Panel title="Activity" aside={<span className="text-[11px] text-muted-foreground">{view.label}</span>} className="h-fit">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.ol key={view.key} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-                {view.activity.map((a, i) => (
-                  <li key={a.text} className="relative flex gap-3 pb-5 last:pb-0">
-                    {i < view.activity.length - 1 && <span className="absolute left-[5px] top-4 h-full w-px bg-border" aria-hidden />}
-                    <span className={cn('relative z-[1] mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full border-2 border-card', a.tone === 'review' ? 'bg-foreground' : 'bg-brand-green')} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] leading-snug">{a.text}</p>
-                      <p className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-                        <span className={cn('rounded px-1.5 py-0.5 text-[10px]', TONE[a.tone].cls)}>{TONE[a.tone].label}</span>
-                        {a.when} ago
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </motion.ol>
-            </AnimatePresence>
-          </Panel>
-        </div>
-
-        {/* apps in motion */}
-        {SHOW_APPS && motion3.length > 0 && (
-          <Panel title="Apps in motion" aside={<button type="button" onClick={onOpenApps} className="text-[11px] text-brand-green transition-colors hover:text-brand-green-hover">View all</button>}>
-            <ul className="grid gap-3 md:grid-cols-3">
-              {motion3.map((a) => {
-                const Icon = CATEGORIES.find((c) => c.key === a.cat)?.icon ?? FileText;
-                return (
-                  <li key={a.id}>
-                    <button
-                      type="button"
-                      onClick={() => onOpenApp(a.id)}
-                      className="flex w-full items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:border-brand-green/40 hover:bg-accent"
-                    >
-                      <Ring pct={a.pct} />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1.5 text-[13.5px] font-semibold">
-                          <Icon className="h-3.5 w-3.5 shrink-0 text-brand-green" aria-hidden />
-                          <span className="truncate">{a.name}</span>
-                        </span>
-                        <span className="mt-1 block text-[11.5px] text-muted-foreground">
-                          {STAGES[a.stage]} stage · {a.owner}
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </Panel>
-        )}
-
-        {/* workspaces overview, only on the roll-up */}
-        {cat === 'all' && (
-          <Panel title="Workspaces">
-            <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-              {CATEGORIES.map((c) => {
-                const n = pendingCount(decisions, c.key);
-                const Icon = c.icon;
-                return (
-                  <li key={c.key}>
-                    <button
-                      type="button"
-                      onClick={() => onWorkspace(c.key)}
-                      className="w-full rounded-xl border border-border p-3.5 text-left transition-colors hover:border-brand-green/40 hover:bg-accent"
-                    >
-                      <Icon className="h-5 w-5 text-brand-green" aria-hidden />
-                      <p className="mt-3 text-[13.5px] font-semibold">{c.label}</p>
-                      <p className="mt-0.5 text-[11.5px] text-muted-foreground">{n === 0 ? 'All clear' : `${n} waiting`}</p>
-                      <span className="mt-3 block h-1 overflow-hidden rounded-full bg-border">
-                        <span className="block h-full rounded-full bg-brand-green" style={{ width: `${Math.round((APPROVED_SHARE[c.key] ?? 0.6) * 100)}%` }} />
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </Panel>
-        )}
-
-        <p className="pb-2 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">Sample data</p>
       </div>
+
+      {/* cards */}
+      <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-[1.15fr_1fr_1fr]">
+        <Card title="Top Activity" onOpen={openApprovals} className="md:row-span-2" delay={0}>
+          <ul className="flex-1 divide-y divide-border">
+            {pending.slice(0, 4).map((a) => (
+              <li key={a.id} className="py-3.5 first:pt-0">
+                <div className="flex items-center gap-2 text-[10.5px] text-muted-foreground">
+                  <span className="rounded bg-chart-blue/15 px-1.5 py-0.5 font-medium text-chart-blue">In progress</span>
+                  <span className="truncate">
+                    {a.by} · {a.stage} stage
+                  </span>
+                </div>
+                <div className="mt-2 flex items-start justify-between gap-3">
+                  <p className="text-[13px] font-semibold leading-snug">{a.title}</p>
+                  <button
+                    type="button"
+                    onClick={() => onOpenApprovals(a.cat)}
+                    className="shrink-0 rounded-md bg-muted px-2.5 py-1 text-[11px] text-foreground transition-colors hover:bg-accent"
+                  >
+                    Review with AI
+                  </button>
+                </div>
+              </li>
+            ))}
+            {pending.length === 0 && <li className="py-10 text-center text-[13px] text-muted-foreground">You are all caught up.</li>}
+          </ul>
+          <button type="button" onClick={openApprovals} className="mt-3 self-start text-[11.5px] text-muted-foreground transition-colors hover:text-foreground">
+            See all in Approvals
+          </button>
+        </Card>
+
+        <Card title="Delivery posture" onOpen={openApprovals} delay={0.06}>
+          <Gauge pct={share} />
+          <p className="mt-5 text-[12px] leading-snug text-muted-foreground">
+            {share}% of delivery stages are approved. {pending.length} {pending.length === 1 ? 'decision is' : 'decisions are'} still open.
+          </p>
+          <button type="button" onClick={openApprovals} className="mt-3 self-end rounded-md bg-muted px-2.5 py-1 text-[11px] transition-colors hover:bg-accent">
+            Review with AI
+          </button>
+        </Card>
+
+        <Card title="Open approvals" onOpen={openApprovals} delay={0.12}>
+          <div className="flex items-center gap-5">
+            <Donut parts={buckets.map((b) => ({ n: b.n, cls: b.cls }))} total={pending.length} />
+            <ul className="space-y-2 text-[12px]">
+              {buckets.map((b) => (
+                <li key={b.label} className="flex items-center gap-2">
+                  <span className={cn('h-2 w-2 shrink-0 rounded-full', b.dot)} />
+                  <span className="text-muted-foreground">{b.label}</span>
+                  <span className="font-semibold tabular-nums">{b.n}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="mt-5 text-[12px] leading-snug text-muted-foreground">
+            {pending[0] ? `The longest wait is ${pending[0].age}, on ${pending[0].title}.` : 'Nothing is waiting on you.'}
+          </p>
+        </Card>
+
+        <Card title="Workspace status" onOpen={() => onWorkspace('all')} delay={0.18}>
+          <ul className="space-y-3.5">
+            {rows.map((r) => (
+              <li key={r.key} className="flex items-center gap-3 text-[12px]">
+                <span className="w-16 shrink-0 text-muted-foreground">{r.label}</span>
+                <span className="flex h-3.5 flex-1 overflow-hidden rounded-sm bg-chart-blue">
+                  <motion.span className="h-full bg-chart-red" initial={{ width: 0 }} animate={{ width: `${r.pct}%` }} transition={{ duration: 0.8, ease: EASE }} />
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-5 flex items-center justify-center gap-5 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-chart-red" /> Waiting
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-chart-blue" /> Approved
+            </span>
+          </div>
+        </Card>
+
+        <Card title="Skills" onOpen={openApprovals} delay={0.24}>
+          <ul className="divide-y divide-border">
+            {SKILLS.map((s) => (
+              <li key={s.name} className="flex items-center justify-between gap-3 py-3 text-[12.5px] first:pt-0 last:pb-0">
+                <span>{s.name}</span>
+                <span className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground">Active · {s.tasks} tasks</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+
+      <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">Sample data</p>
     </div>
   );
 }

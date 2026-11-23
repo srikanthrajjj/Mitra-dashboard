@@ -4,7 +4,7 @@ import { CheckCheck, ChevronDown, Home, LayoutGrid, LogOut, MessageSquare, Panel
 import { Logo, LogoMark } from './Logo';
 import { Notifications } from './Notifications';
 import { CATEGORIES, type Decisions } from '../data';
-import { SHOW_APPS } from '../config';
+import { SHOW_APPS, SHOW_WORKSPACES } from '../config';
 import { cn } from '../lib/utils';
 
 export type ViewKey = 'home' | 'apps' | 'approvals' | 'chat';
@@ -204,6 +204,7 @@ function Body({
           <Row icon={CheckCheck} label="Approvals" count={p.total} active={p.view === 'approvals'} collapsed={collapsed} onClick={() => go('approvals', 'all')} />
         </div>
 
+        {SHOW_WORKSPACES && (
         <div>
           {!collapsed && (
             <button
@@ -233,6 +234,7 @@ function Body({
             </ul>
           )}
         </div>
+        )}
 
         {!collapsed && p.chats.length > 0 && (
           <div>
