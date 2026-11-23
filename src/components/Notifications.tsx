@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Bell } from 'lucide-react';
 import { APPROVALS, type Decisions } from '../data';
@@ -8,23 +9,24 @@ import { cn } from '../lib/utils';
 export function Notifications({
   decisions,
   onOpen,
-  placement,
   className,
 }: {
   decisions: Decisions;
   onOpen: (cat: string) => void;
-  /** Where the panel opens: below the bell, or to the right of it (used in the narrow sidebar). */
-  placement: 'below' | 'right';
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 320 });
   const waiting = APPROVALS.filter((a) => !decisions[a.id]).slice(0, 4);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || panel.current?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     document.addEventListener('mousedown', onDown);
@@ -33,6 +35,24 @@ export function Notifications({
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
+  }, [open]);
+
+  // The panel is drawn on the page itself (not inside the sidebar), placed under the bell and kept
+  // inside the window, so it is never cut off by the sidebar or the screen edge.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = ref.current?.getBoundingClientRect();
+      if (!r) return;
+      const width = Math.min(340, window.innerWidth - 16);
+      // Wide screens: open beside the sidebar so it covers nothing. Phones: under the bell.
+      const side = window.innerWidth >= 768 ? ref.current?.closest('aside')?.getBoundingClientRect() : undefined;
+      if (side) setPos({ top: Math.max(8, r.top), left: side.right + 8, width });
+      else setPos({ top: r.bottom + 8, left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), width });
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
   }, [open]);
 
   return (
@@ -48,17 +68,19 @@ export function Notifications({
         <Bell className="h-4 w-4" />
         {waiting.length > 0 && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-brand-green" />}
       </button>
+      {createPortal(
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: placement === 'below' ? -6 : 0, x: placement === 'right' ? -6 : 0 }}
-            animate={{ opacity: 1, y: 0, x: 0 }}
+            ref={panel}
+            role="dialog"
+            aria-label="Notifications"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className={cn(
-              'absolute z-[55] w-80 overflow-hidden rounded-xl border border-mitra-border bg-mitra-surface',
-              placement === 'below' ? 'right-0 top-full mt-1.5' : 'left-0 top-full mt-1.5',
-            )}
+            style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, maxHeight: `calc(100dvh - ${pos.top + 12}px)` }}
+            className="z-[70] overflow-y-auto rounded-xl border border-mitra-border bg-mitra-surface shadow-[0_16px_40px_-12px_rgba(15,23,42,0.3)]"
           >
             <p className="border-b border-border px-4 py-3 text-[13px] font-semibold">Waiting on you</p>
             {waiting.length === 0 ? (
@@ -99,7 +121,9 @@ export function Notifications({
             </button>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body,
+      )}
     </div>
   );
 }

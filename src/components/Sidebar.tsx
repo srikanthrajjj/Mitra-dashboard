@@ -185,7 +185,6 @@ function Body({
               p.onOpenApprovals(c);
               onClose?.();
             }}
-            placement={collapsed ? 'right' : 'below'}
             className="h-8 w-8"
           />
           {onClose ? (
