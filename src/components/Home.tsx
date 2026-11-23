@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'motion/react';
 import { ArrowRight, Check, CheckCheck, FileText, LayoutGrid, Rocket, Wrench } from 'lucide-react';
 import { AskBar } from './AskBar';
+import { SHOW_APPS } from '../config';
 import {
   APPROVALS,
   APPS,
@@ -87,16 +88,15 @@ interface HomeProps {
   view: View;
   email: string;
   decisions: Decisions;
-  focusTick: number;
   onDecide: (id: string, d: Decision | null) => void;
   onOpenApp: (id: string) => void;
   onOpenApps: () => void;
   onOpenApprovals: (cat: string) => void;
   onWorkspace: (cat: string) => void;
-  onToast: (title: string, body: string) => void;
+  onAsk: (text: string) => void;
 }
 
-export function Home({ cat, view, email, decisions, focusTick, onDecide, onOpenApp, onOpenApps, onOpenApprovals, onWorkspace, onToast }: HomeProps) {
+export function Home({ cat, view, email, decisions, onDecide, onOpenApp, onOpenApps, onOpenApprovals, onWorkspace, onAsk }: HomeProps) {
   const inScope = <T extends { cat: string }>(x: T) => cat === 'all' || x.cat === cat;
   const pending = APPROVALS.filter((a) => !decisions[a.id] && inScope(a)).sort((a, b) => ageMinutes(b.age) - ageMinutes(a.age));
   const next = pending[0];
@@ -111,7 +111,8 @@ export function Home({ cat, view, email, decisions, focusTick, onDecide, onOpenA
   const needApproval = inBuild.filter((a) => a.approvalId && !decisions[a.approvalId]).length;
   const date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  const kpis: { label: string; value: number; note: string; icon: ReactNode; onClick: () => void }[] = [
+  const toApps = SHOW_APPS ? onOpenApps : undefined;
+  const kpis: { label: string; value: number; note: string; icon: ReactNode; onClick?: () => void }[] = [
     {
       label: 'Waiting on you',
       value: pending.length,
@@ -119,9 +120,16 @@ export function Home({ cat, view, email, decisions, focusTick, onDecide, onOpenA
       icon: <CheckCheck className="h-4 w-4" aria-hidden />,
       onClick: () => onOpenApprovals(cat),
     },
-    { label: 'Apps in build', value: inBuild.length, note: `${needApproval} need approval`, icon: <Wrench className="h-4 w-4" aria-hidden />, onClick: onOpenApps },
-    { label: 'Live apps', value: live.length, note: `${Math.round(share * 100)}% of stages approved`, icon: <Rocket className="h-4 w-4" aria-hidden />, onClick: onOpenApps },
-    { label: 'Shipped this week', value: week[0], note: `${week[1]} approvals given`, icon: <LayoutGrid className="h-4 w-4" aria-hidden />, onClick: onOpenApps },
+    ...(SHOW_APPS
+      ? [
+          { label: 'Apps in build', value: inBuild.length, note: `${needApproval} need approval`, icon: <Wrench className="h-4 w-4" aria-hidden />, onClick: toApps },
+          { label: 'Live apps', value: live.length, note: `${Math.round(share * 100)}% of stages approved`, icon: <Rocket className="h-4 w-4" aria-hidden />, onClick: toApps },
+        ]
+      : [
+          { label: 'Approvals given', value: week[1], note: 'This week', icon: <Wrench className="h-4 w-4" aria-hidden />, onClick: undefined },
+          { label: 'Skills run', value: week[2], note: 'This week', icon: <Rocket className="h-4 w-4" aria-hidden />, onClick: undefined },
+        ]),
+    { label: 'Shipped this week', value: week[0], note: `${Math.round(share * 100)}% of stages approved`, icon: <LayoutGrid className="h-4 w-4" aria-hidden />, onClick: toApps },
   ];
 
   return (
@@ -142,29 +150,29 @@ export function Home({ cat, view, email, decisions, focusTick, onDecide, onOpenA
             {pending.length > 0 ? (
               <>
                 <span className="font-medium text-foreground">{pending.length} {pending.length === 1 ? 'approval needs' : 'approvals need'} you</span>
-                {' '}and {inBuild.length} {inBuild.length === 1 ? 'app is' : 'apps are'} in build.
+                {' '}and {inBuild.length} {inBuild.length === 1 ? 'build is' : 'builds are'} in progress.
               </>
             ) : (
               'Nothing is waiting on you. Your agents are still building.'
             )}
           </p>
           <div className="mt-6 max-w-3xl">
-            <AskBar scope={cat} decisions={decisions} focusTick={focusTick} onOpenApp={onOpenApp} onOpenApprovals={onOpenApprovals} onToast={onToast} />
+            <AskBar decisions={decisions} onAsk={onAsk} onOpenApp={onOpenApp} onOpenApprovals={onOpenApprovals} />
           </div>
         </div>
 
         {/* at a glance */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {kpis.map((k, i) => (
-            <motion.button
+            <motion.div
               key={k.label}
-              type="button"
-              onClick={k.onClick}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.06, ease: EASE }}
-              className="group rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-brand-green/40"
+              className="contents"
             >
+              {k.onClick ? (
+                <button type="button" onClick={k.onClick} className="group rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-brand-green/40">
               <div className="flex items-center justify-between text-muted-foreground">
                 <span className="text-[12px]">{k.label}</span>
                 <span className="text-brand-green">{k.icon}</span>
@@ -173,7 +181,20 @@ export function Home({ cat, view, email, decisions, focusTick, onDecide, onOpenA
                 <Count value={k.value} />
               </p>
               <p className="mt-2 truncate text-[11.5px] text-muted-foreground">{k.note}</p>
-            </motion.button>
+                </button>
+              ) : (
+                <div className="rounded-2xl border border-border bg-card p-4 text-left">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[12px]">{k.label}</span>
+                <span className="text-brand-green">{k.icon}</span>
+              </div>
+              <p className="mt-3 font-display text-[2.4rem] font-semibold leading-none tabular-nums tracking-[-0.04em]">
+                <Count value={k.value} />
+              </p>
+              <p className="mt-2 truncate text-[11.5px] text-muted-foreground">{k.note}</p>
+                </div>
+              )}
+            </motion.div>
           ))}
         </div>
 
@@ -245,10 +266,10 @@ export function Home({ cat, view, email, decisions, focusTick, onDecide, onOpenA
             </Panel>
 
             {/* delivery pipeline */}
-            <Panel title="Delivery pipeline" aside={<button type="button" onClick={onOpenApps} className="text-[11px] text-brand-green transition-colors hover:text-brand-green-hover">All apps</button>}>
+            <Panel title="Delivery pipeline" aside={SHOW_APPS ? <button type="button" onClick={onOpenApps} className="text-[11px] text-brand-green transition-colors hover:text-brand-green-hover">All apps</button> : undefined}>
               <div className="grid grid-cols-6 items-end gap-2 sm:gap-3">
                 {[...STAGES, 'Live'].map((label, i) => (
-                  <button key={label} type="button" onClick={onOpenApps} className="group flex flex-col items-center gap-2" title={`${stageCounts[i]} ${stageCounts[i] === 1 ? 'app' : 'apps'} · ${label}`}>
+                  <button key={label} type="button" onClick={toApps} disabled={!SHOW_APPS} className="group flex flex-col items-center gap-2 disabled:cursor-default" title={`${stageCounts[i]} ${stageCounts[i] === 1 ? 'app' : 'apps'} · ${label}`}>
                     <span className="font-display text-lg font-semibold tabular-nums tracking-[-0.03em]">{stageCounts[i]}</span>
                     <span className="flex h-24 w-full items-end overflow-hidden rounded-lg bg-muted">
                       <motion.span
@@ -288,7 +309,7 @@ export function Home({ cat, view, email, decisions, focusTick, onDecide, onOpenA
         </div>
 
         {/* apps in motion */}
-        {motion3.length > 0 && (
+        {SHOW_APPS && motion3.length > 0 && (
           <Panel title="Apps in motion" aside={<button type="button" onClick={onOpenApps} className="text-[11px] text-brand-green transition-colors hover:text-brand-green-hover">View all</button>}>
             <ul className="grid gap-3 md:grid-cols-3">
               {motion3.map((a) => {

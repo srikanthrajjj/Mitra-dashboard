@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CheckCheck, ChevronDown, Home, LayoutGrid, LogOut, PanelLeftClose, PanelLeftOpen, Plus, X, type LucideIcon } from 'lucide-react';
+import { CheckCheck, ChevronDown, Home, LayoutGrid, LogOut, MessageSquare, PanelLeftClose, PanelLeftOpen, Plus, X, type LucideIcon } from 'lucide-react';
 import { Logo, LogoMark } from './Logo';
 import { Notifications } from './Notifications';
 import { CATEGORIES, type Decisions } from '../data';
+import { SHOW_APPS } from '../config';
 import { cn } from '../lib/utils';
 
-export type ViewKey = 'home' | 'apps' | 'approvals';
+export type ViewKey = 'home' | 'apps' | 'approvals' | 'chat';
 
 interface SidebarProps {
   view: ViewKey;
   cat: string;
   counts: Record<string, number>;
   total: number;
+  chats: { id: string; title: string }[];
+  activeChatId: string | null;
+  onOpenChat: (id: string) => void;
+  onDeleteChat: (id: string) => void;
   decisions: Decisions;
   onOpenApprovals: (cat: string) => void;
   collapsed: boolean;
@@ -137,6 +142,7 @@ function Body({
   ...p
 }: SidebarProps & { onClose?: () => void }) {
   const [wsOpen, setWsOpen] = useState(true);
+  const [recentsOpen, setRecentsOpen] = useState(true);
   const go = (view: ViewKey, cat: string) => {
     p.onGo(view, cat);
     onClose?.();
@@ -194,7 +200,7 @@ function Body({
       <nav aria-label="Main" className="mt-3 flex-1 space-y-4 overflow-y-auto px-2">
         <div className="space-y-0.5">
           <Row icon={Home} label="Home" active={p.view === 'home' && p.cat === 'all'} collapsed={collapsed} onClick={() => go('home', 'all')} />
-          <Row icon={LayoutGrid} label="Apps" active={p.view === 'apps'} collapsed={collapsed} onClick={() => go('apps', 'all')} />
+          {SHOW_APPS && <Row icon={LayoutGrid} label="Apps" active={p.view === 'apps'} collapsed={collapsed} onClick={() => go('apps', 'all')} />}
           <Row icon={CheckCheck} label="Approvals" count={p.total} active={p.view === 'approvals'} collapsed={collapsed} onClick={() => go('approvals', 'all')} />
         </div>
 
@@ -227,6 +233,54 @@ function Body({
             </ul>
           )}
         </div>
+
+        {!collapsed && p.chats.length > 0 && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setRecentsOpen((v) => !v)}
+              aria-expanded={recentsOpen}
+              className="mb-1 flex w-full items-center justify-between px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Recents
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !recentsOpen && '-rotate-90')} aria-hidden />
+            </button>
+            {recentsOpen && (
+              <ul className="space-y-0.5">
+                {p.chats.map((c) => {
+                  const active = p.view === 'chat' && p.activeChatId === c.id;
+                  return (
+                    <li key={c.id} className="group relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          p.onOpenChat(c.id);
+                          onClose?.();
+                        }}
+                        aria-current={active ? 'page' : undefined}
+                        className={cn(
+                          'flex w-full items-center gap-2.5 rounded-md py-2 pl-2.5 pr-8 text-left text-[13px] transition-colors',
+                          active ? 'bg-brand-green/10 text-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                        )}
+                      >
+                        <MessageSquare className={cn('h-4 w-4 shrink-0', active && 'text-brand-green')} aria-hidden />
+                        <span className="truncate">{c.title}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => p.onDeleteChat(c.id)}
+                        aria-label={`Delete chat ${c.title}`}
+                        className="absolute right-1.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus:opacity-100 group-hover:opacity-100"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
       </nav>
 
       <AvatarMenu email={p.email} collapsed={collapsed} onSignOut={p.onSignOut} />

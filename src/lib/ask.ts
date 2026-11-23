@@ -1,3 +1,4 @@
+import { SHOW_APPS } from '../config';
 import { APPROVALS, APPS, CATEGORIES, WEEK, appStatus, pendingCount, type AppItem, type Approval, type Decisions } from '../data';
 
 /**
@@ -11,6 +12,7 @@ export type Answer =
   | { kind: 'apps'; steps: string[]; items: AppItem[]; scope: string }
   | { kind: 'plan'; steps: string[]; name: string; tasks: string[]; scope: string }
   | { kind: 'summary'; steps: string[]; lines: { label: string; value: string }[]; scope: string }
+  | { kind: 'text'; steps: string[]; text: string }
   | { kind: 'none'; steps: string[] };
 
 export type Suggestion =
@@ -20,7 +22,7 @@ export type Suggestion =
 
 export const STARTERS: { text: string; hint: string }[] = [
   { text: 'What is waiting on my approval?', hint: 'Approvals' },
-  { text: 'Show apps in progress', hint: 'Apps' },
+  SHOW_APPS ? { text: 'Show apps in progress', hint: 'Apps' } : { text: 'What is waiting in SecOps?', hint: 'Approvals' },
   { text: 'Build a vendor intake app with a risk checklist', hint: 'Build' },
   { text: 'Summarise this week', hint: 'Summary' },
 ];
@@ -44,6 +46,14 @@ function planName(q: string): string {
 export function route(query: string, decisions: Decisions, scope: string): Answer {
   const q = query.trim();
   const lc = q.toLowerCase();
+
+  if (/^(hi|hello|hey|yo|good (morning|afternoon|evening))\b/.test(lc)) {
+    return { kind: 'text', steps: [], text: 'Hi! I can show you what is waiting on your approval, find an app, summarise the week, or plan a new build. What would you like to do?' };
+  }
+  if (/^(thanks|thank you|cheers)\b/.test(lc)) {
+    return { kind: 'text', steps: [], text: 'You are welcome. Ask me anything else about your apps and approvals.' };
+  }
+
   const cat = workspaceIn(lc, scope);
   const where = label(cat);
 
@@ -126,7 +136,8 @@ export function suggest(query: string, decisions: Decisions): Suggestion[] {
   const q = query.trim().toLowerCase();
   if (!q) return STARTERS.map((s, i) => ({ id: `s${i}`, kind: 'ask', text: s.text, hint: s.hint }));
   const out: Suggestion[] = [{ id: 'ask', kind: 'ask', text: query.trim(), hint: 'Ask Mitra' }];
-  APPS.filter((a) => a.name.toLowerCase().includes(q))
+  (SHOW_APPS ? APPS : [])
+    .filter((a) => a.name.toLowerCase().includes(q))
     .slice(0, 3)
     .forEach((app) => out.push({ id: app.id, kind: 'app', app }));
   APPROVALS.filter((a) => !decisions[a.id] && a.title.toLowerCase().includes(q))
