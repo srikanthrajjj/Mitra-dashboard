@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CheckCheck, ChevronDown, Home, LogOut, PanelLeftClose, PanelLeftOpen, Plus, X, type LucideIcon } from 'lucide-react';
-import { Logo } from './Logo';
-import { CATEGORIES } from '../data';
+import { CheckCheck, ChevronDown, Home, LayoutGrid, LogOut, PanelLeftClose, PanelLeftOpen, Plus, X, type LucideIcon } from 'lucide-react';
+import { Logo, LogoMark } from './Logo';
+import { Notifications } from './Notifications';
+import { CATEGORIES, type Decisions } from '../data';
 import { cn } from '../lib/utils';
 
-export type ViewKey = 'home' | 'approvals';
+export type ViewKey = 'home' | 'apps' | 'approvals';
 
 interface SidebarProps {
   view: ViewKey;
   cat: string;
   counts: Record<string, number>;
   total: number;
+  decisions: Decisions;
+  onOpenApprovals: (cat: string) => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onNew: () => void;
@@ -141,23 +144,34 @@ function Body({
 
   return (
     <div className="flex h-full flex-col">
-      <div className={cn('flex items-center p-3', collapsed ? 'justify-center' : 'justify-between')}>
-        {!collapsed && <Logo className="ml-1 h-[20px] w-auto" />}
-        {onClose ? (
-          <button type="button" onClick={onClose} aria-label="Close menu" className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-          </button>
-        )}
+      <div className={cn('p-3', collapsed ? 'flex flex-col items-center gap-2' : 'flex items-center justify-between')}>
+        {collapsed ? <LogoMark size={26} /> : <Logo size={24} className="ml-1" />}
+        <div className={cn('flex items-center', collapsed ? 'flex-col gap-1' : 'gap-0.5')}>
+          <Notifications
+            decisions={p.decisions}
+            onOpen={(c) => {
+              p.onOpenApprovals(c);
+              onClose?.();
+            }}
+            placement={collapsed ? 'right' : 'below'}
+            className="h-8 w-8"
+          />
+          {onClose ? (
+            <button type="button" onClick={onClose} aria-label="Close menu" className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="px-2">
@@ -180,6 +194,7 @@ function Body({
       <nav aria-label="Main" className="mt-3 flex-1 space-y-4 overflow-y-auto px-2">
         <div className="space-y-0.5">
           <Row icon={Home} label="Home" active={p.view === 'home' && p.cat === 'all'} collapsed={collapsed} onClick={() => go('home', 'all')} />
+          <Row icon={LayoutGrid} label="Apps" active={p.view === 'apps'} collapsed={collapsed} onClick={() => go('apps', 'all')} />
           <Row icon={CheckCheck} label="Approvals" count={p.total} active={p.view === 'approvals'} collapsed={collapsed} onClick={() => go('approvals', 'all')} />
         </div>
 

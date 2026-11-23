@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Bell, Check, CheckCheck, Home as HomeIcon, Menu, Search } from 'lucide-react';
+import { Check, CheckCheck, Home as HomeIcon, LayoutGrid, Menu, Search } from 'lucide-react';
 import { Sidebar, type ViewKey } from './Sidebar';
 import { Home } from './Home';
 import { Approvals } from './Approvals';
+import { Apps } from './Apps';
+import { ThemeToggle } from './ThemeToggle';
+import type { Theme } from '../lib/theme';
 import { CommandPalette, type PaletteItem } from './CommandPalette';
-import { ALL_VIEW, APPROVALS, APPROVED_SHARE, CATEGORIES, WEEK, pendingCount, type Decision, type Decisions } from '../data';
+import { ALL_VIEW, APPROVALS, APPS, CATEGORIES, appStatus, pendingCount, type Decision, type Decisions } from '../data';
 import { cn } from '../lib/utils';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -19,11 +22,11 @@ function readCollapsed(): boolean {
   }
 }
 
-/** Notifications: the newest approvals still waiting on the user. */
-function Bell_({ decisions, onOpen }: { decisions: Decisions; onOpen: (cat: string) => void }) {
+/** Header app switcher: the grid icon opens a launcher with the most recently touched apps. */
+function AppSwitcher({ decisions, onOpenApp, onAll }: { decisions: Decisions; onOpenApp: (id: string) => void; onAll: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const waiting = APPROVALS.filter((a) => !decisions[a.id]).slice(0, 4);
+  const recent = APPS.slice(0, 6);
 
   useEffect(() => {
     if (!open) return;
@@ -44,12 +47,11 @@ function Bell_({ decisions, onOpen }: { decisions: Decisions; onOpen: (cat: stri
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Notifications"
+        aria-label="Apps"
         aria-expanded={open}
-        className="relative rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        <Bell className="h-4 w-4" />
-        {waiting.length > 0 && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-brand-green" />}
+        <LayoutGrid className="h-4 w-4" />
       </button>
       <AnimatePresence>
         {open && (
@@ -60,42 +62,40 @@ function Bell_({ decisions, onOpen }: { decisions: Decisions; onOpen: (cat: stri
             transition={{ duration: 0.15 }}
             className="absolute right-0 top-full z-30 mt-1.5 w-80 overflow-hidden rounded-xl border border-mitra-border bg-mitra-surface"
           >
-            <p className="border-b border-border px-4 py-3 text-[13px] font-semibold">Waiting on you</p>
-            {waiting.length === 0 ? (
-              <p className="px-4 py-8 text-center text-[13px] text-muted-foreground">You are all caught up.</p>
-            ) : (
-              <ul>
-                {waiting.map((a) => (
+            <p className="border-b border-border px-4 py-3 text-[13px] font-semibold">Your apps</p>
+            <ul className="grid grid-cols-3 gap-1 p-2">
+              {recent.map((a) => {
+                const Icon = CATEGORIES.find((k) => k.key === a.cat)?.icon ?? LayoutGrid;
+                const live = appStatus(a, decisions) === 'live';
+                return (
                   <li key={a.id}>
                     <button
                       type="button"
                       onClick={() => {
                         setOpen(false);
-                        onOpen(a.cat);
+                        onOpenApp(a.id);
                       }}
-                      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
+                      className="flex w-full flex-col items-center gap-1.5 rounded-lg px-1 py-3 text-center transition-colors hover:bg-accent"
                     >
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-green" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-medium">{a.title}</span>
-                        <span className="block text-[11.5px] text-muted-foreground">
-                          {a.stage} stage · {a.by} · {a.age} ago
-                        </span>
+                      <span className="relative grid h-10 w-10 place-items-center rounded-lg bg-muted text-brand-green">
+                        <Icon className="h-5 w-5" aria-hidden />
+                        {live && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-brand-green" />}
                       </span>
+                      <span className="line-clamp-2 text-[11.5px] leading-tight">{a.name}</span>
                     </button>
                   </li>
-                ))}
-              </ul>
-            )}
+                );
+              })}
+            </ul>
             <button
               type="button"
               onClick={() => {
                 setOpen(false);
-                onOpen('all');
+                onAll();
               }}
               className="w-full border-t border-border px-4 py-3 text-left text-[12.5px] text-brand-green transition-colors hover:bg-accent"
             >
-              View all approvals
+              View all apps
             </button>
           </motion.div>
         )}
@@ -104,7 +104,7 @@ function Bell_({ decisions, onOpen }: { decisions: Decisions; onOpen: (cat: stri
   );
 }
 
-export function Dashboard({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+export function Dashboard({ email, onSignOut, theme, onToggleTheme }: { email: string; onSignOut: () => void; theme: Theme; onToggleTheme: () => void }) {
   const [view, setView] = useState<ViewKey>('home');
   const [cat, setCat] = useState('all');
   const [decisions, setDecisions] = useState<Decisions>({});
@@ -112,6 +112,7 @@ export function Dashboard({ email, onSignOut }: { email: string; onSignOut: () =
   const [drawer, setDrawer] = useState(false);
   const [palette, setPalette] = useState(false);
   const [focusTick, setFocusTick] = useState(0);
+  const [openApp, setOpenApp] = useState<string | null>(null);
   const [toast, setToast] = useState<{ title: string; body: string } | null>(null);
 
   const counts = useMemo(() => Object.fromEntries(CATEGORIES.map((k) => [k.key, pendingCount(decisions, k.key)])), [decisions]);
@@ -122,6 +123,15 @@ export function Dashboard({ email, onSignOut }: { email: string; onSignOut: () =
   const go = useCallback((v: ViewKey, c: string) => {
     setView(v);
     setCat(c);
+    setOpenApp(null);
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  const showApp = useCallback((id: string) => {
+    const a = APPS.find((x) => x.id === id);
+    setView('apps');
+    setCat(a?.cat ?? 'all');
+    setOpenApp(id);
     window.scrollTo({ top: 0 });
   }, []);
 
@@ -172,8 +182,16 @@ export function Dashboard({ email, onSignOut }: { email: string; onSignOut: () =
   const paletteItems: PaletteItem[] = useMemo(
     () => [
       { id: 'home', label: 'Home', hint: 'Screen', icon: HomeIcon, run: () => go('home', 'all') },
+      { id: 'apps', label: 'Apps', hint: `${APPS.length} apps`, icon: LayoutGrid, run: () => go('apps', 'all') },
       { id: 'approvals', label: 'Approvals', hint: `${total} pending`, icon: CheckCheck, run: () => go('approvals', 'all') },
       ...CATEGORIES.map((k) => ({ id: `ws-${k.key}`, label: k.label, hint: 'Workspace', icon: k.icon, run: () => go('home', k.key) })),
+      ...APPS.map((a) => ({
+        id: a.id,
+        label: a.name,
+        hint: 'App',
+        icon: LayoutGrid,
+        run: () => showApp(a.id),
+      })),
       ...APPROVALS.filter((a) => !decisions[a.id]).map((a) => ({
         id: a.id,
         label: a.title,
@@ -182,7 +200,7 @@ export function Dashboard({ email, onSignOut }: { email: string; onSignOut: () =
         run: () => go('approvals', a.cat),
       })),
     ],
-    [decisions, go, total],
+    [decisions, go, showApp, total],
   );
 
   const crumb = view === 'approvals' ? 'Approvals' : current.label;
@@ -194,6 +212,8 @@ export function Dashboard({ email, onSignOut }: { email: string; onSignOut: () =
         cat={cat}
         counts={counts}
         total={total}
+        decisions={decisions}
+        onOpenApprovals={(c) => go('approvals', c)}
         collapsed={collapsed}
         onToggleCollapsed={toggleCollapsed}
         onNew={newChat}
@@ -216,7 +236,7 @@ export function Dashboard({ email, onSignOut }: { email: string; onSignOut: () =
               <Menu className="h-4 w-4" />
             </button>
             <p className="truncate text-[12px] text-muted-foreground">
-              {view === 'approvals' ? 'Approvals' : 'Workspace'} {view === 'home' && <span className="px-1">/</span>}
+              {view === 'approvals' ? 'Approvals' : view === 'apps' ? 'Apps' : 'Workspace'} {view === 'home' && <span className="px-1">/</span>}
               {view === 'home' && <span className="text-foreground">{crumb}</span>}
             </p>
           </div>
@@ -231,7 +251,8 @@ export function Dashboard({ email, onSignOut }: { email: string; onSignOut: () =
               <span className="hidden sm:inline">Search</span>
               <kbd className="hidden rounded border border-border px-1 font-mono text-[10px] sm:inline">⌘K</kbd>
             </button>
-            <Bell_ decisions={decisions} onOpen={(c) => go('approvals', c)} />
+            <AppSwitcher decisions={decisions} onOpenApp={showApp} onAll={() => go('apps', 'all')} />
+            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           </div>
         </header>
 
@@ -245,16 +266,20 @@ export function Dashboard({ email, onSignOut }: { email: string; onSignOut: () =
           >
             {view === 'home' ? (
               <Home
+                cat={cat}
                 view={current}
                 email={email}
-                pending={pendingCount(decisions, cat)}
-                waiting={waiting}
-                share={APPROVED_SHARE[cat] ?? 0.64}
-                week={WEEK[cat] ?? WEEK.all}
+                decisions={decisions}
                 focusTick={focusTick}
+                onDecide={decide}
+                onOpenApp={showApp}
+                onOpenApps={() => go('apps', cat)}
                 onOpenApprovals={(c) => go('approvals', c)}
-                onToast={(body) => setToast({ title: 'Plan ready', body })}
+                onWorkspace={(c) => go('home', c)}
+                onToast={(title, body) => setToast({ title, body })}
               />
+            ) : view === 'apps' ? (
+              <Apps cat={cat} onCat={setCat} decisions={decisions} openId={openApp} onOpen={setOpenApp} onReview={(c) => go('approvals', c)} />
             ) : (
               <Approvals cat={cat} onCat={setCat} decisions={decisions} onDecide={decide} onHome={() => go('home', 'all')} />
             )}
