@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-display: "Manrope", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-border: hsl(var(--border));
+
+  --color-brand-green: #4fcf36;
+  --color-brand-green-hover: #72e95a;
+
+  --color-mitra-sidebar: #181818;
+  --color-mitra-surface: #1c1c1c;
+  --color-mitra-border: #2d2d2d;
+  --color-mitra-highlight: #313131;
+  --color-mitra-input: #252525;
+}
+
+:root {
+  color-scheme: dark;
+  --background: 0 0% 8%;
+  --foreground: 0 0% 95%;
+  --card: 0 0% 11%;
+  --muted: 0 0% 16.5%;
+  --muted-foreground: 0 0% 58%;
+  --accent: 0 0% 19%;
+  --border: 0 0% 18%;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+.font-display {
+  font-family: var(--font-display);
+}
+
+button {
+  font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
