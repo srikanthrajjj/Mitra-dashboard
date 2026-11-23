@@ -1,4 +1,4 @@
-import { Headset, Package, Server, Shield, Users, Wrench, type LucideIcon } from 'lucide-react';
+import { Headset, LayoutDashboard, Package, Server, Shield, Users, Wrench, type LucideIcon } from 'lucide-react';
 
 /** Sample portal data. Illustrative only. */
 export type Tone = 'build' | 'review' | 'done' | 'draft';
@@ -17,7 +17,6 @@ export interface Category {
   key: string;
   label: string;
   icon: LucideIcon;
-  pending: number;
   activity: Activity[];
   builds: Build[];
 }
@@ -27,7 +26,6 @@ export const CATEGORIES: Category[] = [
     key: 'itsm',
     label: 'ITSM',
     icon: Headset,
-    pending: 3,
     activity: [
       { text: 'Incident triage flow moved to Test', when: '2m', tone: 'build' },
       { text: 'Major incident runbook drafted', when: '14m', tone: 'draft' },
@@ -44,7 +42,6 @@ export const CATEGORIES: Category[] = [
     key: 'itom',
     label: 'ITOM',
     icon: Server,
-    pending: 1,
     activity: [
       { text: 'Event rules mapped to 24 services', when: '6m', tone: 'build' },
       { text: 'Discovery schedule sent for review', when: '32m', tone: 'review' },
@@ -61,7 +58,6 @@ export const CATEGORIES: Category[] = [
     key: 'itam',
     label: 'ITAM',
     icon: Package,
-    pending: 2,
     activity: [
       { text: 'Asset intake catalog item published', when: '9m', tone: 'done' },
       { text: 'Software licence report drafted', when: '41m', tone: 'draft' },
@@ -78,7 +74,6 @@ export const CATEGORIES: Category[] = [
     key: 'hrsd',
     label: 'HRSD',
     icon: Users,
-    pending: 4,
     activity: [
       { text: 'Employee onboarding app awaiting approval', when: '4m', tone: 'review' },
       { text: 'Offboarding task template generated', when: '27m', tone: 'draft' },
@@ -95,7 +90,6 @@ export const CATEGORIES: Category[] = [
     key: 'csm',
     label: 'CSM',
     icon: Wrench,
-    pending: 2,
     activity: [
       { text: 'Case routing rules moved to Test', when: '11m', tone: 'build' },
       { text: 'SLA escalation flow approved', when: '58m', tone: 'done' },
@@ -112,7 +106,6 @@ export const CATEGORIES: Category[] = [
     key: 'secops',
     label: 'SecOps',
     icon: Shield,
-    pending: 5,
     activity: [
       { text: 'Access review process built', when: '7m', tone: 'done' },
       { text: 'Vulnerability response flow in Develop', when: '36m', tone: 'build' },
@@ -132,4 +125,85 @@ export const TONE: Record<Tone, { label: string; cls: string }> = {
   review: { label: 'Review', cls: 'bg-muted text-foreground' },
   done: { label: 'Approved', cls: 'bg-brand-green/15 text-brand-green' },
   draft: { label: 'Drafted', cls: 'bg-muted text-muted-foreground' },
+};
+
+/* ------------------------------------------------------------------ */
+/* Approvals: the single source for every count shown in the app       */
+/* ------------------------------------------------------------------ */
+
+export interface Approval {
+  id: string;
+  cat: string;
+  title: string;
+  stage: string;
+  by: string;
+  age: string;
+  summary: string;
+  artifacts: number;
+}
+
+export type Decision = 'approved' | 'changes';
+export type Decisions = Record<string, Decision>;
+
+export const APPROVALS: Approval[] = [
+  { id: 'a1', cat: 'itsm', title: 'Incident triage', stage: 'Test', by: 'Maria Chen', age: '12m', summary: 'ATF suite passes. Routing rules ready to promote to production.', artifacts: 6 },
+  { id: 'a2', cat: 'itsm', title: 'Change approval flow', stage: 'Develop', by: 'Priya Nair', age: '1h', summary: 'Flow and approval groups configured for standard and normal changes.', artifacts: 5 },
+  { id: 'a3', cat: 'itsm', title: 'Knowledge article agent', stage: 'Define', by: 'Tom Walker', age: '3h', summary: 'User stories and acceptance criteria captured from the workshop.', artifacts: 3 },
+  { id: 'a4', cat: 'itom', title: 'Alert enrichment', stage: 'Deploy', by: 'Sam Ortiz', age: '32m', summary: 'Update set staged. Rollback plan attached.', artifacts: 4 },
+  { id: 'a5', cat: 'itam', title: 'Asset intake', stage: 'Deploy', by: 'Lena Fischer', age: '9m', summary: 'Catalog item and fulfilment tasks ready for promotion.', artifacts: 5 },
+  { id: 'a6', cat: 'itam', title: 'Hardware refresh', stage: 'Test', by: 'Lena Fischer', age: '2h', summary: 'Refresh workflow validated against 12 test scenarios.', artifacts: 4 },
+  { id: 'a7', cat: 'hrsd', title: 'Employee onboarding', stage: 'Document', by: 'Alex Morgan', age: '4m', summary: 'Training guide and release notes drafted for the onboarding app.', artifacts: 7 },
+  { id: 'a8', cat: 'hrsd', title: 'Offboarding', stage: 'Develop', by: 'Dana Reyes', age: '27m', summary: 'Task templates and equipment return flow built.', artifacts: 4 },
+  { id: 'a9', cat: 'hrsd', title: 'HR case routing', stage: 'Develop', by: 'Dana Reyes', age: '1h', summary: 'Routing rules by case type and region configured.', artifacts: 3 },
+  { id: 'a10', cat: 'hrsd', title: 'Benefits request form', stage: 'Deploy', by: 'Jo Park', age: '3h', summary: 'Form and approvals tested. Ready for release.', artifacts: 5 },
+  { id: 'a11', cat: 'csm', title: 'Case routing', stage: 'Test', by: 'Ines Duarte', age: '11m', summary: 'Routing and SLA timers verified in the test instance.', artifacts: 5 },
+  { id: 'a12', cat: 'csm', title: 'SLA escalation', stage: 'Deploy', by: 'Ines Duarte', age: '58m', summary: 'Escalation flow staged with notification templates.', artifacts: 4 },
+  { id: 'a13', cat: 'secops', title: 'Access reviews', stage: 'Deploy', by: 'Kofi Mensah', age: '7m', summary: 'Review tasks and attestation records ready to go live.', artifacts: 6 },
+  { id: 'a14', cat: 'secops', title: 'Vulnerability response', stage: 'Develop', by: 'Noor Haddad', age: '36m', summary: 'Prioritisation rules and remediation tasks built.', artifacts: 5 },
+  { id: 'a15', cat: 'secops', title: 'Exception handling', stage: 'Define', by: 'Noor Haddad', age: '2h', summary: 'Exception policy and sign-off steps defined.', artifacts: 3 },
+  { id: 'a16', cat: 'secops', title: 'Audit trail report', stage: 'Document', by: 'Kofi Mensah', age: '5h', summary: 'Evidence report generated for the quarterly review.', artifacts: 2 },
+  { id: 'a17', cat: 'secops', title: 'Privileged access policy', stage: 'Test', by: 'Kofi Mensah', age: '6h', summary: 'Policy checks pass. Awaiting security sign-off.', artifacts: 4 },
+];
+
+export const pendingCount = (d: Decisions, cat?: string): number =>
+  APPROVALS.filter((a) => !d[a.id] && (!cat || cat === 'all' || a.cat === cat)).length;
+
+/* ------------------------------------------------------------------ */
+/* "All workspaces": a roll-up shown on Home                           */
+/* ------------------------------------------------------------------ */
+
+export interface View {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  activity: Activity[];
+  builds: Build[];
+}
+
+export const ALL_VIEW: View = {
+  key: 'all',
+  label: 'All workspaces',
+  icon: LayoutDashboard,
+  activity: CATEGORIES.map((c) => c.activity[0]).slice(0, 5),
+  builds: CATEGORIES.map((c) => c.builds[0]).sort((a, b) => b.pct - a.pct).slice(0, 3),
+};
+
+export const WEEK: Record<string, [number, number, number]> = {
+  all: [23, 65, 213],
+  itsm: [4, 11, 38],
+  itom: [2, 6, 21],
+  itam: [3, 8, 27],
+  hrsd: [5, 14, 45],
+  csm: [3, 9, 30],
+  secops: [6, 17, 52],
+};
+
+export const APPROVED_SHARE: Record<string, number> = {
+  all: 0.64,
+  itsm: 0.57,
+  itom: 0.78,
+  itam: 0.66,
+  hrsd: 0.5,
+  csm: 0.72,
+  secops: 0.64,
 };
