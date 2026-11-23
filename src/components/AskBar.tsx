@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowUp, CheckCheck, CornerDownLeft, LayoutGrid, Mic, Plus, Sparkles } from 'lucide-react';
+import { ArrowUp, CheckCheck, CornerDownLeft, LayoutGrid, MessageSquare, Mic, Plus } from 'lucide-react';
 import { CATEGORIES, type Decisions } from '../data';
 import { suggest, type Suggestion } from '../lib/ask';
 import { cn } from '../lib/utils';
@@ -130,7 +130,7 @@ export function AskBar({ decisions, onAsk, onOpenApp, onOpenApprovals }: AskBarP
             <p className="px-3 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{q.trim() ? 'Suggestions' : 'Try asking'}</p>
             {suggestions.map((s, i) => {
               const active = i === idx;
-              let icon: ReactNode = <Sparkles className="h-4 w-4 text-brand-green" aria-hidden />;
+              let icon: ReactNode = <MessageSquare className="h-4 w-4 text-brand-green" aria-hidden />;
               let text = '';
               let hint = '';
               if (s.kind === 'ask') {

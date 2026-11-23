@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Sparkles, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, type LucideIcon } from 'lucide-react';
 import { WaveCanvas } from './WaveCanvas';
 import { ThemeToggle } from './ThemeToggle';
 import type { Theme } from '../lib/theme';
@@ -167,7 +167,7 @@ export function Login({ onSignedIn, theme, onToggleTheme }: LoginProps) {
                 <p className="mt-1.5 text-[14px] text-muted-foreground">Sign in to pick up where your agents left off.</p>
 
                 <button type="button" onClick={startDemo} className={cn(PRIMARY, 'mt-7')}>
-                  <Sparkles className="h-4 w-4" aria-hidden /> Continue as demo user
+                  Continue as demo user
                 </button>
                 <p className="mt-2 text-center text-[12px] text-muted-foreground">One click. No credentials needed.</p>
 

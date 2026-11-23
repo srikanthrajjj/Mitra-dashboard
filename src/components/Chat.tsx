@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
-import { ArrowUp, CheckCheck, LayoutGrid, Sparkles, Wrench } from 'lucide-react';
+import { ArrowUp, CheckCheck, LayoutGrid, MessageSquare, Wrench } from 'lucide-react';
 import { AnswerView } from './AnswerView';
 import { LogoMark } from './Logo';
 import type { Decisions } from '../data';
@@ -10,7 +10,7 @@ import type { Chat as ChatModel } from '../lib/chats';
 import { cn } from '../lib/utils';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const STARTER_ICONS = [CheckCheck, LayoutGrid, Wrench, Sparkles];
+const STARTER_ICONS = [CheckCheck, LayoutGrid, Wrench, MessageSquare];
 
 interface ChatProps {
   chat: ChatModel;
@@ -71,7 +71,7 @@ export function Chat({ chat, decisions, onSend, onSettled, onOpenApp, onOpenAppr
             </motion.div>
             <ul className="mt-8 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
               {STARTERS.map((s, i) => {
-                const Icon = STARTER_ICONS[i] ?? Sparkles;
+                const Icon = STARTER_ICONS[i] ?? MessageSquare;
                 return (
                   <motion.li key={s.text} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 + i * 0.06, ease: EASE }}>
                     <button
