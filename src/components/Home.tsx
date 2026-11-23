@@ -148,8 +148,8 @@ export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWork
 
   const openApprovals = () => onOpenApprovals(cat);
 
-  // Scale the layout to the screen: as large as the width allows, but never taller than the viewport,
-  // so every card is in view without scrolling.
+  // The cards stretch to the full width. Only the height drives scaling, so every card stays in view
+  // without scrolling.
   const outer = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -159,10 +159,9 @@ export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWork
     if (!el || !box) return;
     const fit = () => {
       const desktop = el.clientWidth >= 900;
-      const byWidth = Math.min(1.3, (el.clientWidth - 64) / 1040);
       const natural = box.scrollHeight; // layout height before zoom
       const byHeight = (window.innerHeight - 58) / Math.max(1, natural);
-      setZoom(desktop ? Math.max(0.6, Math.min(byWidth, byHeight)) : 1);
+      setZoom(desktop ? Math.max(0.7, Math.min(1.1, byHeight)) : 1);
     };
     fit();
     const ro = new ResizeObserver(fit);
@@ -177,7 +176,7 @@ export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWork
 
   return (
     <div ref={outer} className="w-full">
-    <div ref={inner} className="mx-auto max-w-[1104px] px-5 pb-6 pt-8 md:px-8 md:pt-10" style={{ zoom }}>
+    <div ref={inner} className="mx-auto w-full max-w-[1720px] px-5 pb-6 pt-8 md:px-10 md:pt-10" style={{ zoom }}>
       {/* greeting + ask */}
       <div className="text-center">
         <h1 className="flex items-center justify-center gap-3 font-display text-[clamp(1.4rem,2.6vw,1.9rem)] font-medium tracking-[-0.02em]">
@@ -202,7 +201,7 @@ export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWork
       </div>
 
       {/* cards */}
-      <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-[1.15fr_1fr_1fr]">
+      <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr] lg:gap-6">
         <Card title="Top Activity" onOpen={openApprovals} className="md:row-span-2" delay={0}>
           <ul className="flex-1 divide-y divide-border">
             {pending.slice(0, 4).map((a) => (
