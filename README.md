@@ -1,12 +1,15 @@
 # Mitra Dashboard
 
-A small standalone app with exactly two screens: a **sign-in page** and the **dashboard** behind it.
-Nothing else is included (no marketing site, no navigation from other pages).
+A small standalone app: a **sign-in page** and the workspace behind it.
 
-- **Sign in**: animated wave background, email and password, show/hide password, *Forgot password?*
-  (reset-link flow), and *Continue with SSO*.
-- **Dashboard**: ServiceNow-style workspace with an ask box, a workspace rail (ITSM, ITOM, ITAM, HRSD,
-  CSM, SecOps) and, for each, recent activity, builds in progress, approvals and items waiting on you.
+- **Sign in**: wave background, one-click **Continue as demo user**, email and password, *Forgot password?* and SSO.
+- **Home**: greeting, an ask bar that really answers (try "What is waiting on my approval in HRSD?", "Show apps in progress",
+  "Build a vendor intake app", "Summarise this week"), key numbers, an *Up next* card you can approve from, a delivery
+  pipeline, apps in motion and a live activity timeline.
+- **Apps**: gallery of what has been built (ITSM, ITOM, ITAM, HRSD, CSM, SecOps), filters, and a detail panel with build progress and artifacts.
+- **Approvals**: approve, request changes or undo. One list drives every count, so badges, Home and apps stay in step.
+- **Everywhere**: collapsible sidebar with the notification bell next to the logo, a header app switcher, a command palette
+  (`Ctrl/Cmd + K`), and a light/dark theme toggle (the sun/moon button; remembered per browser).
 
 > **This is a front-end demo.** There is no backend: any email and password are accepted, SSO and
 > password reset are simulated, and the session lives in `sessionStorage` for the tab. All dashboard

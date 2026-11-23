@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, Sparkles, type LucideIcon } from 'lucide-react';
 import { Logo } from './Logo';
 import { WaveCanvas } from './WaveCanvas';
+import { ThemeToggle } from './ThemeToggle';
+import type { Theme } from '../lib/theme';
 import { cn } from '../lib/utils';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -11,6 +13,8 @@ const WORKSPACES = ['ITSM', 'ITOM', 'ITAM', 'HRSD', 'CSM', 'SecOps'];
 
 interface LoginProps {
   onSignedIn: (email: string) => void;
+  theme: Theme;
+  onToggleTheme: () => void;
 }
 
 type Mode = 'signin' | 'forgot' | 'sent' | 'sso' | 'demo';
@@ -58,7 +62,7 @@ function Notice({ children }: { children: ReactNode }) {
   );
 }
 
-export function Login({ onSignedIn }: LoginProps) {
+export function Login({ onSignedIn, theme, onToggleTheme }: LoginProps) {
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -109,17 +113,17 @@ export function Login({ onSignedIn }: LoginProps) {
     <div className="grid min-h-screen bg-background lg:grid-cols-[1.08fr_1fr]">
       {/* left: wave visual */}
       <aside className="relative hidden overflow-hidden border-r border-border bg-mitra-sidebar lg:block">
-        <WaveCanvas className="absolute inset-0 h-full w-full" />
+        <WaveCanvas key={theme} className="absolute inset-0 h-full w-full" />
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              'radial-gradient(ellipse 70% 50% at 30% 55%, color-mix(in srgb, var(--color-brand-green) 14%, transparent), transparent 70%), linear-gradient(to top, #181818 4%, transparent 46%), linear-gradient(to bottom, #181818 0%, transparent 22%)',
+              'radial-gradient(ellipse 70% 50% at 30% 55%, color-mix(in srgb, var(--color-brand-green) 14%, transparent), transparent 70%), linear-gradient(to top, var(--mitra-sidebar) 4%, transparent 46%), linear-gradient(to bottom, var(--mitra-sidebar) 0%, transparent 22%)',
           }}
           aria-hidden
         />
         <div className="relative flex h-full flex-col justify-between p-10 xl:p-14">
-          <Logo className="h-[26px] w-auto self-start" />
+          <Logo size={28} className="self-start" />
           <div>
             <h2 className="max-w-[16ch] font-display text-[clamp(2.2rem,3.6vw,3.4rem)] font-semibold leading-[1.04] tracking-[-0.035em]">
               Your agents build. <span className="text-brand-green">You approve.</span>
@@ -140,14 +144,15 @@ export function Login({ onSignedIn }: LoginProps) {
 
       {/* right: sign in */}
       <main className="relative flex items-center justify-center overflow-hidden px-6 py-12">
-        <WaveCanvas className="absolute inset-0 h-full w-full opacity-25 lg:hidden" />
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} className="absolute right-4 top-4 z-10" />
+        <WaveCanvas key={`m-${theme}`} className="absolute inset-0 h-full w-full opacity-25 lg:hidden" />
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: EASE }}
           className="relative w-full max-w-[24rem]"
         >
-          <Logo className="h-[24px] w-auto lg:hidden" />
+          <Logo size={26} className="lg:hidden" />
 
           <AnimatePresence mode="wait" initial={false}>
             {mode === 'signin' && (

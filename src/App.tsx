@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
+import { useTheme } from './lib/theme';
 
 const KEY = 'mitra-dashboard:session';
 
@@ -28,6 +29,7 @@ function writeSession(email: string | null) {
  */
 export default function App() {
   const [user, setUser] = useState<string | null>(() => readSession());
+  const [theme, toggleTheme] = useTheme();
 
   const signIn = (email: string) => {
     writeSession(email);
@@ -47,7 +49,11 @@ export default function App() {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.35 }}
       >
-        {user ? <Dashboard email={user} onSignOut={signOut} /> : <Login onSignedIn={signIn} />}
+        {user ? (
+          <Dashboard email={user} onSignOut={signOut} theme={theme} onToggleTheme={toggleTheme} />
+        ) : (
+          <Login onSignedIn={signIn} theme={theme} onToggleTheme={toggleTheme} />
+        )}
       </motion.div>
     </AnimatePresence>
   );

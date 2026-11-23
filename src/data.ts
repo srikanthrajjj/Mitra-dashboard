@@ -207,3 +207,87 @@ export const APPROVED_SHARE: Record<string, number> = {
   csm: 0.72,
   secops: 0.64,
 };
+
+/* ------------------------------------------------------------------ */
+/* Apps: what Mitra has built for the instance                   */
+/* ------------------------------------------------------------------ */
+
+export const STAGES = ['Define', 'Develop', 'Test', 'Document', 'Deploy'] as const;
+const STAGE_PCT = [18, 40, 62, 82, 94];
+const ARTIFACT_NAMES = [
+  'Requirements document',
+  'User stories',
+  'Data model',
+  'Workflow diagram',
+  'Role matrix',
+  'Test script',
+  'Training guide',
+  'Release notes',
+  'Deployment checklist',
+];
+
+export interface AppItem {
+  id: string;
+  name: string;
+  cat: string;
+  version: string;
+  owner: string;
+  updated: string;
+  description: string;
+  /** 0 to 4 for the five build stages, 5 once the app is live. */
+  stage: number;
+  pct: number;
+  /** The approval that gates this app's current stage, if there is one. */
+  approvalId?: string;
+  artifacts: string[];
+  activity: string[];
+}
+
+const LIVE: Omit<AppItem, 'stage' | 'pct' | 'approvalId'>[] = [
+  { id: 'app-l1', name: 'Major incident runbook', cat: 'itsm', version: '1.2', owner: 'Maria Chen', updated: '2d', description: 'Runbook flows and communication templates for P1 incidents.', artifacts: ARTIFACT_NAMES.slice(0, 7), activity: ['Promoted to production', 'Release notes published', 'Approved by Maria Chen'] },
+  { id: 'app-l2', name: 'CMDB health report', cat: 'itom', version: '1.0', owner: 'Sam Ortiz', updated: '4d', description: 'Weekly completeness and correctness report across key classes.', artifacts: ARTIFACT_NAMES.slice(0, 6), activity: ['Promoted to production', 'Scheduled report enabled', 'Approved by Sam Ortiz'] },
+  { id: 'app-l3', name: 'Software licence tracker', cat: 'itam', version: '1.1', owner: 'Lena Fischer', updated: '1w', description: 'Tracks entitlements and flags over-use before renewal.', artifacts: ARTIFACT_NAMES.slice(0, 7), activity: ['Promoted to production', 'Renewal alerts configured', 'Approved by Lena Fischer'] },
+  { id: 'app-l4', name: 'Policy acknowledgement', cat: 'hrsd', version: '1.0', owner: 'Jo Park', updated: '1w', description: 'Collects employee sign-off on policy updates with an audit trail.', artifacts: ARTIFACT_NAMES.slice(0, 6), activity: ['Promoted to production', 'Reminder flow enabled', 'Approved by Jo Park'] },
+  { id: 'app-l5', name: 'Customer portal', cat: 'csm', version: '2.0', owner: 'Ines Duarte', updated: '2w', description: 'Self-service pages for cases, entitlements and knowledge.', artifacts: ARTIFACT_NAMES.slice(0, 8), activity: ['Promoted to production', 'Accessibility review passed', 'Approved by Ines Duarte'] },
+  { id: 'app-l6', name: 'Security incident response', cat: 'secops', version: '1.3', owner: 'Noor Haddad', updated: '3w', description: 'Triage, containment and evidence tracking for security incidents.', artifacts: ARTIFACT_NAMES.slice(0, 8), activity: ['Promoted to production', 'Playbooks linked', 'Approved by Noor Haddad'] },
+];
+
+export const APPS: AppItem[] = [
+  ...APPROVALS.map((a): AppItem => {
+    const stage = STAGES.indexOf(a.stage as (typeof STAGES)[number]);
+    return {
+      id: `app-${a.id}`,
+      name: a.title,
+      cat: a.cat,
+      version: `0.${stage + 1}`,
+      owner: a.by,
+      updated: a.age,
+      description: a.summary,
+      stage,
+      pct: STAGE_PCT[stage] ?? 50,
+      approvalId: a.id,
+      artifacts: ARTIFACT_NAMES.slice(0, Math.min(a.artifacts, ARTIFACT_NAMES.length)),
+      activity: [`${a.by} submitted the ${a.stage} stage for approval`, `Agents generated ${a.artifacts} artifacts`, 'Requirements captured from the workshop'],
+    };
+  }),
+  ...LIVE.map((l): AppItem => ({ ...l, stage: 5, pct: 100 })),
+];
+
+export type AppStatus = 'live' | 'approval' | 'approved' | 'changes' | 'building';
+
+/** An app's status follows its approval: deciding on it in Approvals changes it here. */
+export function appStatus(app: AppItem, decisions: Decisions): AppStatus {
+  if (app.stage >= 5) return 'live';
+  const d = app.approvalId ? decisions[app.approvalId] : undefined;
+  if (d === 'approved') return 'approved';
+  if (d === 'changes') return 'changes';
+  return app.approvalId ? 'approval' : 'building';
+}
+
+export const APP_STATUS_LABEL: Record<AppStatus, { label: string; cls: string }> = {
+  live: { label: 'Live', cls: 'bg-brand-green/15 text-brand-green' },
+  approval: { label: 'Needs approval', cls: 'bg-foreground text-background' },
+  approved: { label: 'Approved', cls: 'bg-brand-green/15 text-brand-green' },
+  changes: { label: 'Changes requested', cls: 'bg-muted text-foreground' },
+  building: { label: 'In build', cls: 'bg-muted text-muted-foreground' },
+};
