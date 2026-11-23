@@ -13,8 +13,10 @@
     <title>Mitra</title>
     <script>
       try {
-        if (localStorage.getItem("mitra-dashboard:theme") === "light") document.documentElement.classList.add("light");
-      } catch (e) {}
+        if (localStorage.getItem("mitra-dashboard:theme-v2") !== "dark") document.documentElement.classList.add("light");
+      } catch (e) {
+        document.documentElement.classList.add("light");
+      }
     </script>
   </head>
   <body>

@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export type Theme = 'dark' | 'light';
-const KEY = 'mitra-dashboard:theme';
+const KEY = 'mitra-dashboard:theme-v2';
 
 function read(): Theme {
   try {
-    return window.localStorage.getItem(KEY) === 'light' ? 'light' : 'dark';
+    return window.localStorage.getItem(KEY) === 'dark' ? 'dark' : 'light';
   } catch {
-    return 'dark';
+    return 'light';
   }
 }
 
-/** Dark by default. The choice is remembered, and the class goes on <html> so every token follows it. */
+/** Light by default. The choice is remembered, and the class goes on <html> so every token follows it. */
 export function useTheme(): [Theme, () => void] {
   const [theme, setTheme] = useState<Theme>(read);
 
