@@ -181,7 +181,7 @@ export function Apps({ cat, onCat, decisions, openId, onOpen, onReview }: AppsPr
     <div className="mx-auto max-w-6xl space-y-6 p-5 md:p-8">
       <div>
         <h1 className="font-display text-[clamp(1.5rem,3vw,2.25rem)] font-semibold tracking-[-0.03em]">Apps</h1>
-        <p className="mt-1.5 text-[14px] text-muted-foreground">Everything Mitra has built for your instance, from first draft to live.</p>
+        <p className="mt-1.5 text-[14px] text-muted-foreground">Everything Acme has built for your instance, from first draft to live.</p>
       </div>
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter by workspace">

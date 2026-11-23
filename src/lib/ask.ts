@@ -135,7 +135,7 @@ export function route(query: string, decisions: Decisions, scope: string): Answe
 export function suggest(query: string, decisions: Decisions): Suggestion[] {
   const q = query.trim().toLowerCase();
   if (!q) return STARTERS.map((s, i) => ({ id: `s${i}`, kind: 'ask', text: s.text, hint: s.hint }));
-  const out: Suggestion[] = [{ id: 'ask', kind: 'ask', text: query.trim(), hint: 'Ask Mitra' }];
+  const out: Suggestion[] = [{ id: 'ask', kind: 'ask', text: query.trim(), hint: 'Ask Acme' }];
   (SHOW_APPS ? APPS : [])
     .filter((a) => a.name.toLowerCase().includes(q))
     .slice(0, 3)

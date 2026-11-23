@@ -1,4 +1,4 @@
-# Mitra Dashboard
+# Acme Dashboard
 
 A small standalone app: a **sign-in page** and the workspace behind it.
 

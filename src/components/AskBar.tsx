@@ -99,8 +99,8 @@ export function AskBar({ decisions, onAsk, onOpenApp, onOpenApprovals }: AskBarP
               choose(suggestions[idx]);
             }
           }}
-          placeholder={'Ask Mitra, "What is waiting on me?"'}
-          aria-label="Ask Mitra"
+          placeholder={'Ask Acme, "What is waiting on me?"'}
+          aria-label="Ask Acme"
           aria-expanded={focused}
           autoComplete="off"
           className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"

@@ -143,8 +143,8 @@ export function Chat({ chat, decisions, onSend, onSettled, onOpenApp, onOpenAppr
               }
             }}
             rows={1}
-            placeholder="Message Mitra"
-            aria-label="Message Mitra"
+            placeholder="Message Acme"
+            aria-label="Message Acme"
             className="max-h-40 min-h-[28px] flex-1 resize-none bg-transparent py-1 text-[15px] leading-snug outline-none placeholder:text-muted-foreground"
           />
           <button

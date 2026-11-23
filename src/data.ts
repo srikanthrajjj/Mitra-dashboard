@@ -209,7 +209,7 @@ export const APPROVED_SHARE: Record<string, number> = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Apps: what Mitra has built for the instance                   */
+/* Apps: what Acme has built for the instance                   */
 /* ------------------------------------------------------------------ */
 
 export const STAGES = ['Define', 'Develop', 'Test', 'Document', 'Deploy'] as const;
