@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { ArrowUpRight } from 'lucide-react';
 import { AskBar } from './AskBar';
@@ -148,8 +148,22 @@ export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWork
 
   const openApprovals = () => onOpenApprovals(cat);
 
+  // Scale the whole layout up with the space available, so it fills big screens instead of sitting small.
+  const outer = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+  useEffect(() => {
+    const el = outer.current;
+    if (!el) return;
+    const fit = () => setZoom(Math.min(1.75, Math.max(1, (el.clientWidth - 64) / 1040)));
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="mx-auto max-w-[1040px] px-5 pb-10 pt-10 md:px-8 md:pt-14">
+    <div ref={outer} className="w-full">
+    <div className="mx-auto max-w-[1104px] px-5 pb-10 pt-10 md:px-8 md:pt-14" style={{ zoom }}>
       {/* greeting + ask */}
       <div className="text-center">
         <h1 className="flex items-center justify-center gap-3 font-display text-[clamp(1.4rem,2.6vw,1.9rem)] font-medium tracking-[-0.02em]">
@@ -266,6 +280,7 @@ export function Home({ cat, email, decisions, onOpenApp, onOpenApprovals, onWork
       </div>
 
       <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">Sample data</p>
+    </div>
     </div>
   );
 }
